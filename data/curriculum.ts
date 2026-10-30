@@ -1,0 +1,107 @@
+export type Phase = {
+  id: number;
+  name: string;
+  duration: number;
+  category: "foundations" | "intelligence" | "agents";
+  desc: string;
+  topics: string[];
+  project: string;
+  icon: string;
+};
+export type Lesson = {
+ id: string;
+ phaseId: number;
+ title: string;
+ minutes: number;
+ difficulty: string;
+ objective: string;
+ sections: { heading: string; body: string; code?: string; note?: string }[];
+ challenge: string;
+};
+export const phases: Phase[] = [
+ {id:1,name:"Programming Fundamentals",duration:6,category:"foundations",icon:"code",desc:"Regain confidence in Python, problem-solving, and the execution of code.",topics:["How computers execute programs; CPU, memory, operating systems and interpreters","Python syntax, variables, data types, operators and expressions","Conditions, loops, functions, scope and recursion","Lists, dictionaries, tuples, sets and strings","Files, exceptions, modules, packages and virtual environments","Debugging, basic testing, command-line tools and Git"],project:"Command-line Business Expense Tracker"},
+ {id:2,name:"Computer Science & Problem-Solving",duration:6,category:"foundations",icon:"brain",desc:"Strengthen computational thinking and learn to reason about efficient solutions.",topics:["Computational thinking, pseudocode and flowcharts","Time and space complexity; Big O notation","Arrays, stacks, queues, linked lists, hash tables","Trees, graphs, recursion and traversal","Searching, sorting and common algorithmic patterns","Memory models, references, basic concurrency and problem decomposition"],project:"Searchable Customer Records System"},
+ {id:3,name:"Professional Software Engineering",duration:6,category:"foundations",icon:"layers",desc:"Write code that teams can understand, test, and maintain.",topics:["Object-oriented programming, abstraction and interfaces","SOLID principles, cohesion, coupling and composition","Clean code, refactoring and design patterns","Unit tests, integration tests, mocks and TDD","Git branching, reviews, CI pipelines and technical documentation","TypeScript essentials, maintainability and team workflows"],project:"Test-Driven Service Booking Application"},
+ {id:4,name:"Backend, Databases & Cloud",duration:6,category:"foundations",icon:"database",desc:"Build dependable APIs, databases, and deployable software systems.",topics:["HTTP, DNS, TCP/IP, REST and client-server architecture","FastAPI, Django, authentication and authorization","SQL, PostgreSQL, indexes, joins and transactions","ORMs, migrations, caching, queues and background jobs","Docker, Linux, cloud services, CI/CD and deployment","Logging, performance, API security and scalable system design"],project:"Production-Style SAIRE-Linked Business API"},
+ {id:5,name:"Mathematics & Data Science",duration:6,category:"intelligence",icon:"sigma",desc:"Understand the mathematical ideas behind learning from data.",topics:["Algebra, functions, logarithms and graph interpretation","Vectors, matrices, dot products and linear algebra","Probability, conditional probability and distributions","Statistics, sampling, hypothesis testing and uncertainty","Derivatives, gradients and optimisation intuition","NumPy, Pandas, Matplotlib and exploratory data analysis"],project:"Business Sales Analysis & Forecasting Preparation"},
+ {id:6,name:"Machine Learning",duration:6,category:"intelligence",icon:"chart",desc:"Train, validate, and assess predictive models with confidence.",topics:["Supervised vs unsupervised learning","Regression, classification and clustering","Decision trees, random forests and boosting","Feature engineering, scaling and missing-data treatment","Training, validation, cross-validation and leakage","Metrics, overfitting, bias-variance and model interpretation"],project:"Customer Churn Prediction API"},
+ {id:7,name:"Deep Learning & NLP",duration:6,category:"intelligence",icon:"network",desc:"Learn how neural networks and transformers represent information.",topics:["Neurons, layers and neural networks","Backpropagation and gradient descent","PyTorch tensors, autograd and training loops","Embeddings, sequence models and attention","Transformer architectures, tokenisation and pretraining","Transfer learning, fine-tuning and model evaluation"],project:"Customer Message Intent Classifier"},
+ {id:8,name:"Generative AI & LLM Applications",duration:5,category:"intelligence",icon:"spark",desc:"Build grounded language-model apps, not just prompt demos.",topics:["Language model capabilities, limitations and model selection","Prompts, messages, context windows and structured outputs","LLM APIs, streaming, retries and rate limits","Context engineering and conversation state","Embeddings, semantic search and vector databases","RAG ingestion, chunking, retrieval, reranking and citations"],project:"SAIRE-Linked Knowledge Assistant"},
+ {id:9,name:"AI Agent Engineering",duration:8,category:"agents",icon:"bot",desc:"Design agents that call tools, maintain state, and request approval.",topics:["Workflows versus agents; decision loops and tool use","Function calling, tool schemas and validation","Agent state, memory, checkpoints and recovery","LangGraph, routing, branching and orchestrated workflows","Model Context Protocol (MCP) and external integrations","Planning, delegation, multi-agent systems and human approval"],project:"AI Business Operations Agent"},
+ {id:10,name:"Production AI, Security & LLMOps",duration:6,category:"agents",icon:"shield",desc:"Evaluate, safeguard, monitor, and maintain AI systems at scale.",topics:["Evaluation datasets, model and tool-use testing","Tracing, observability, reliability and failure analysis","Prompt injection, untrusted content and permission boundaries","PII protection, secrets management and data governance","Latency, token usage, caching, cost control and scaling","Human oversight, audit logs, deployment and rollback"],project:"Secure, Evaluated AI Customer Support System"},
+ {id:11,name:"Advanced AI Specialisation",duration:8,category:"agents",icon:"cpu",desc:"Explore multimodal capabilities and performance-sensitive AI systems.",topics:["Advanced retrieval and hybrid search","Multimodal AI: image, speech, audio and documents","Fine-tuning, LoRA and efficient model adaptation","Local models, quantisation and inference optimisation","Distributed systems, event-driven agents and asynchronous workflows","Research literacy, experiment design and independent architecture"],project:"Multimodal Document-Processing Agent"},
+ {id:12,name:"Capstone, Commercialisation & Career",duration:8,category:"agents",icon:"rocket",desc:"Turn your engineering knowledge into a demonstrable AI business product.",topics:["Finding and validating a real business problem","Product discovery, requirements and system architecture","Building an end-to-end production AI product","Multi-tenancy, billing, quotas and customer onboarding","Load testing, operational monitoring and security review","GitHub portfolio, technical interviews, documentation and demonstrations"],project:"Deploy an SAIRE-Linked AI SaaS MVP"}
+];
+export const stack = [
+ {title:"Python",role:"Core language",description:"Algorithms, backend development, automation, machine learning and agent logic.",tag:"01"},
+ {title:"TypeScript + Next.js",role:"Product interfaces",description:"Reliable, accessible learning interfaces and AI-enabled SaaS experiences.",tag:"02"},
+ {title:"PyTorch + scikit-learn",role:"Machine learning",description:"Data preparation, model training, neural networks and evaluation.",tag:"03"},
+ {title:"LangGraph + MCP",role:"Agent orchestration",description:"Stateful AI workflows, tools, approvals and external integrations.",tag:"04"},
+ {title:"PostgreSQL + FastAPI + Docker",role:"Infrastructure",description:"Production APIs, secure data systems and cloud deployment.",tag:"05"}
+];
+export const resources = [
+ {name:"Official Python Tutorial",category:"Programming",url:"https://docs.python.org/3/tutorial/"},
+ {name:"Harvard CS50",category:"Computer science",url:"https://cs50.harvard.edu/x/"},
+ {name:"PyTorch Tutorials",category:"Deep learning",url:"https://pytorch.org/tutorials/"},
+ {name:"Hugging Face Agents Course",category:"AI agents",url:"https://huggingface.co/learn/agents-course/en/unit0/introduction"},
+ {name:"LangGraph Academy",category:"Orchestration",url:"https://academy.langchain.com/courses/intro-to-langgraph"},
+ {name:"LangChain Learning Guides",category:"LLM applications",url:"https://docs.langchain.com/oss/python/learn"}
+];
+export const projects = [
+ {id:"expense",name:"Business Expense Manager",level:"Beginner",phase:1,description:"Track income, expenses, categories and budgets through a structured Python command-line application.",skills:["Python","Files","Debugging"]},
+ {id:"records",name:"Customer Records Search",level:"Foundations",phase:2,description:"Develop search and sorting features using data structures and complexity analysis.",skills:["Algorithms","Data structures"]},
+ {id:"booking",name:"Service Booking App",level:"Intermediate",phase:3,description:"Apply composition, clean architecture, automated testing and code review practices.",skills:["OOP","TDD","TypeScript"]},
+ {id:"api",name:"Business Management API",level:"Backend",phase:4,description:"Build authentication, customers, project records and permissions with PostgreSQL.",skills:["REST","PostgreSQL","Docker"]},
+ {id:"sales",name:"Sales Analysis Workbook",level:"Data science",phase:5,description:"Clean datasets, investigate patterns, and communicate uncertainty.",skills:["Pandas","Statistics"]},
+ {id:"churn",name:"Customer Churn Prediction",level:"Machine learning",phase:6,description:"Compare baseline and predictive models without leaking evaluation data.",skills:["scikit-learn","Metrics"]},
+ {id:"intent",name:"Message Intent Classifier",level:"Deep learning",phase:7,description:"Train and assess a small language classifier with PyTorch.",skills:["NLP","PyTorch"]},
+ {id:"knowledge",name:"SAIRE Knowledge Assistant",level:"Generative AI",phase:8,description:"Answer questions from approved company documents with citations.",skills:["RAG","Embeddings"]},
+ {id:"operations",name:"AI Business Operations Agent",level:"Agent engineering",phase:9,description:"Use validated tools for customer enquiries, draft quotations and approval-based actions.",skills:["Tools","MCP","LangGraph"]},
+ {id:"support",name:"Secure AI Customer Support",level:"Production AI",phase:10,description:"Add test suites, safety boundaries, tracing, cost controls and escalation.",skills:["Eval","Security","Monitoring"]},
+ {id:"multimodal",name:"Document Processing Agent",level:"Advanced",phase:11,description:"Process and classify business documents while reporting confidence and limitations.",skills:["Multimodal","Inference"]},
+ {id:"saas",name:"SAIRE AI SaaS MVP",level:"Capstone",phase:12,description:"Ship a production-oriented, monetisable multi-tenant product with documentation and tests.",skills:["Product","Full-stack","Deployment"]}
+];
+export const lessons: Lesson[] = [
+ {id:"p1-l1",phaseId:1,title:"What is programming, really?",minutes:25,difficulty:"Fundamentals",objective:"Explain how a program executes and use inputs, calculations, variables and output to solve a business problem.",sections:[
+  {heading:"Programming is structured problem solving",body:"A program is a set of instructions a computer can execute. Think of a customer requesting a SAIRE-Linked website quotation. We need inputs (package price and extras), processing (calculate the cost), and output (the amount payable). The computer cannot guess the next step: our instructions must be precise.",note:"Core mental model: INPUT → PROCESS → OUTPUT. This model also appears in complex AI systems."},
+  {heading:"What actually runs your Python code?",body:"In the common CPython implementation, your Python source is compiled to bytecode, which is executed by the Python virtual machine. The system ultimately coordinates CPU instructions, memory, files and other resources. Understanding this helps you debug and reason about performance."},
+  {heading:"Your first quotation calculator",body:"Names in Python refer to objects. Strings represent text, and integers represent whole numbers. Here we bind names to values, calculate a total, and print the result. The prices are fictional values for this exercise.",code:'package_name = "Growth Website"\nbase_price = 5000\nadditional_services = 1200\n\ntotal_price = base_price + additional_services\n\nprint("SAIRE-Linked Quotation")\nprint("Package:", package_name)\nprint("Total: R", total_price)',note:"Expected total: R6200. The print() function sends text to standard output, normally the terminal."},
+  {heading:"Extend the logic with a discount",body:"Instead of racing into code, break the change into steps: calculate subtotal, calculate the discount amount, subtract it, and show the final price. This is computational thinking in action.",code:'base_price = 5000\nadditional_services = 1200\n\nsubtotal = base_price + additional_services\ndiscount_rate = 0.10\ndiscount_amount = subtotal * discount_rate\nfinal_price = subtotal - discount_amount\n\nprint("Subtotal: R", subtotal)\nprint("Discount: R", discount_amount)\nprint("Final Price: R", final_price)',note:"Expected final price: R5580. For real money calculations, learn Python's decimal.Decimal rather than relying on binary floating-point arithmetic."}
+ ],challenge:"Build a quotation calculator that displays subtotal, discount, and final amount. Bonus: ask the user to enter the price and discount rather than hardcoding them."},
+ {id:"p1-l2",phaseId:1,title:"Variables, data types & expressions",minutes:35,difficulty:"Fundamentals",objective:"Distinguish common Python types, understand assignments, and use conversion safely.",sections:[
+  {heading:"Names, objects, and types",body:"Python variables are names referring to objects. The value 2500 is an integer, 0.15 is a float, True is a Boolean, and 'Growth' is a string. You can inspect an object's type with type(). Different types support different operations.",code:'package = "Growth"\nprice = 2500\nrate = 0.15\nis_active = True\n\nprint(type(package))\nprint(type(price))\nprint(type(rate))\nprint(type(is_active))'},
+  {heading:"Expressions produce values",body:"An expression such as price + service_fee evaluates to a value. Assignment binds that result to a name. Arithmetic follows normal precedence: multiplication happens before addition unless parentheses change it.",code:'price = 2500\nservice_fee = 500\nvat_rate = 0.15\nsubtotal = price + service_fee\ntotal = subtotal * (1 + vat_rate)\nprint(total)'},
+  {heading:"Input arrives as text",body:"The input() function returns a string. Convert it before doing arithmetic, and plan for incorrect input. Never assume an entry is valid just because it looks numeric.",code:'raw_price = input("Enter package price: ")\ntry:\n    price = float(raw_price)\n    if price < 0:\n        print("Price must not be negative")\n    else:\n        print("Package price:", price)\nexcept ValueError:\n    print("Please enter a valid number")',note:"This basic example uses float for practice. Use Decimal when building real payment or accounting software."}
+ ],challenge:"Write a program for two service prices that converts text input to numbers, calculates a subtotal, and handles invalid entries."},
+ {id:"p1-l3",phaseId:1,title:"Decisions, conditions & loops",minutes:40,difficulty:"Fundamentals",objective:"Use comparisons, if/elif/else and iteration to implement business rules.",sections:[
+  {heading:"Programs make decisions",body:"Business requirements frequently contain rules: if the customer is eligible, apply a discount; otherwise use the normal price. Python uses Boolean expressions and indentation to decide which block runs.",code:'amount = 4500\ncustomer_type = "returning"\n\nif customer_type == "returning":\n    discount = amount * 0.10\nelse:\n    discount = 0\n\nprint(amount - discount)'},
+  {heading:"Loops repeat actions",body:"A for loop is useful when you know the items to process. A while loop repeats while a condition remains true. Every while loop needs a clear route toward finishing.",code:'service_prices = [1200, 850, 500]\ntotal = 0\n\nfor price in service_prices:\n    total += price\n\nprint("Total:", total)'},
+  {heading:"Defensive logic matters",body:"Validation keeps an incorrect input from corrupting calculations. Clearly express business rules and test boundary cases such as zero, negative prices, and unusually large values.",code:'budget = 3000\ncost = 2550\n\nif cost < 0:\n    print("Invalid cost")\nelif cost <= budget:\n    print("Within budget")\nelse:\n    print("Over budget")'}
+ ],challenge:"Create a pricing calculator that processes several items, applies a returning-customer discount, and flags negative prices."},
+ {id:"p1-l4",phaseId:1,title:"Functions & reusable logic",minutes:45,difficulty:"Fundamentals",objective:"Write single-purpose functions with parameters, return values and tests.",sections:[
+  {heading:"Functions name a reusable operation",body:"Functions help us separate what a program does from when we use it. Good names describe intent. Parameters provide inputs; return makes the result available to other code.",code:'def calculate_discount(subtotal, rate):\n    return subtotal * rate\n\nprice = 2500\ndiscount = calculate_discount(price, 0.10)\nprint(price - discount)'},
+  {heading:"Keep logic separate from printing",body:"A function that calculates a total should generally return the value rather than print it. That makes it easier to reuse and test.",code:'def quotation_total(base_price, extras, discount_rate):\n    subtotal = base_price + extras\n    return subtotal * (1 - discount_rate)\n\nprint(quotation_total(5000, 1200, 0.10))'},
+  {heading:"Test your assumptions",body:"Use assertions for simple learning exercises, then progress to automated tests with pytest. Check ordinary cases and boundaries, including a zero discount.",code:'def add(a, b):\n    return a + b\n\nassert add(2, 3) == 5\nassert add(0, 0) == 0',note:"Assertions can be disabled in optimised Python runs, so don't rely on assert for user input validation."}
+ ],challenge:"Refactor your quotation calculator into at least three small functions and write three tests for its logic."}
+];
+export const quiz = [
+ {question:"What is the main purpose of a Python variable?",answers:["Permanently saving information on the disk","Giving a name to an object or value","Creating a new processor instruction","Displaying information automatically"],correct:1,reason:"Python assignment binds a name to an object so you can refer to that object later."},
+ {question:"What is the value of result?   price = 200; result = price * 2 + 50",answers:["450","500","250","400"],correct:0,reason:"Multiplication happens first: 200 × 2 = 400, and 400 + 50 = 450."},
+ {question:"What does print() do?",answers:["Saves information in a database","Compiles Python to JavaScript","Displays values as output","Creates a variable"],correct:2,reason:"print() writes a text representation of values to standard output."},
+ {question:"Which best describes computational thinking?",answers:["Memorising commands","Using AI to write every line","Breaking problems into clear logical steps","Writing code as quickly as possible"],correct:2,reason:"We reason about and decompose a problem before deciding how to implement it."}
+];
+export const weekOne = [
+ {week:1,title:"How programming works",focus:"Execution, variables, data types, input/output, debugging",deliverable:"Interactive business calculator"},
+ {week:2,title:"Making decisions in code",focus:"Boolean logic, conditions, loops, validation",deliverable:"Discount and pricing calculator"},
+ {week:3,title:"Writing reusable logic",focus:"Functions, parameters, returns, scope, modules",deliverable:"Modular quotation generator"},
+ {week:4,title:"Collections and files",focus:"Lists, dictionaries, JSON, Git and tests",deliverable:"Expense tracker v1"}
+];
+export const baseSchedule = [
+ {day:"Mon",full:"Monday",label:"Theory & fundamentals",minutes:75},
+ {day:"Tue",full:"Tuesday",label:"Guided coding tutorial",minutes:90},
+ {day:"Wed",full:"Wednesday",label:"Problem-solving practice",minutes:75},
+ {day:"Thu",full:"Thursday",label:"Deep concepts & debugging",minutes:90},
+ {day:"Fri",full:"Friday",label:"Review & short assessment",minutes:60},
+ {day:"Sat",full:"Saturday",label:"Practical project development",minutes:180},
+ {day:"Sun",full:"Sunday",label:"Reflection / optional revision",minutes:60}
+];
