@@ -168,3 +168,7 @@ The three supplied logos are included untouched as:
 Their optimised `.webp` counterparts are used in the application for faster loading. The site is visually based on SAIRE-Linked's blue/green brand language; individual spacing/typography choices are newly designed for this product, not claimed to be exact source-code copies of the existing website.
 
 © 2026 SAIRE-Linked — All rights reserved by the brand owner.
+
+
+## Content protection prototype (v3)
+See `docs/CONTENT_PROTECTION.md`. Print/save restrictions are **deterrents only**; screenshot blocking and secure subscription content are NOT implemented.

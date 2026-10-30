@@ -38,3 +38,30 @@
 @media(max-width:900px) { .course-picker-label { display:none; } .course-picker { max-width:155px; } .api-banner { margin:8px 0 0; padding:10px 15px; } .course-library-count { display:none; } }
 @media(max-width:560px) { .topbar-actions .live-badge {display:none;} .course-picker {max-width:140px;} .course-library-grid {grid-template-columns:1fr;} }
 @media(prefers-reduced-motion:reduce) { .course-tile {transition:none;} .course-tile:hover {transform:none;} }
+
+
+/* SAIRE Academy v3 - Honest, accessible client-side content deterrence.
+   This does NOT secure DOM text, downloaded JavaScript or OS screenshots.
+   Protect paid materials with Django authentication, object permissions and server-only delivery. */
+.print-protection-notice { display: none; }
+.protected-curriculum { position: relative; }
+.protected-curriculum::after {
+  content: "© SAIRE-LINKED ACADEMY • LICENSED LEARNING MATERIAL";
+  position: absolute; right: 18px; bottom: 7px; color: rgba(81, 228, 189, .32);
+  font: 700 9px 'DM Sans', sans-serif; letter-spacing: .08em; pointer-events: none;
+}
+@media print {
+  .app-shell:has(.protected-curriculum) .sidebar,
+  .app-shell:has(.protected-curriculum) .topbar,
+  .app-shell:has(.protected-curriculum) .lesson-article,
+  .app-shell:has(.protected-curriculum) .lesson-sidebar,
+  .app-shell:has(.protected-curriculum) .footer,
+  .app-shell:has(.protected-curriculum) .sidebar-overlay { display: none !important; }
+  .app-shell:has(.protected-curriculum) .print-protection-notice {
+    display: block !important; color: #122738 !important; background: white !important;
+    padding: 28mm 18mm; font: 17px/1.55 Arial, sans-serif;
+    border-left: 5px solid #008F77; page-break-inside: avoid;
+  }
+  .app-shell:has(.protected-curriculum) .main-shell,
+  .app-shell:has(.protected-curriculum) .content { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #fff !important; }
+}
