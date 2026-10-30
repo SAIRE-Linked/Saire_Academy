@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "saire-academy-cli"
+version = "0.1.0"
+description = "SAIRE-Linked Academy assignment workflow"
+requires-python = ">=3.10"
+
+[project.scripts]
+saire = "saire_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["saire_cli*"]

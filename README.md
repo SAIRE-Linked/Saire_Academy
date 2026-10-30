@@ -1,3 +1,11 @@
+# SAIRE-Linked Academy — ProofLoop v4
+
+**New:** Authenticated Django assessments, original starter assignment ZIPs, recorded assignment deadlines and commit-based submissions, instructor code-defence scoring, a `/assignments` React workspace, and the `saire` Python CLI.
+
+**Start here:** [`docs/PROOFLOOP_V4_SETUP.md`](docs/PROOFLOOP_V4_SETUP.md). This upgrade does **not** execute untrusted code on Django, automate official grading, or provision GitHub repos server-side. Learner local tests are advisory only; an instructor enters official verified scores after independent inspection. The earlier curriculum and content-protection demo remain intact.
+
+---
+
 # SAIRE-Linked Digital Learning Platform — Django CMS Edition (v2)
 
 **Build Smarter. Learn Deeper.** This upgraded project preserves the original animated Next.js learning website and adds a real Django + Django REST Framework curriculum management backend.

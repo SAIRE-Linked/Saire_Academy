@@ -1,13 +1,13 @@
 {
   "slug": "saire-quotation-engine",
   "title": "SAIRE Quotation Engine",
-  "course_slug": "ai-engineering-mastery",
+  "course_slug": "ai-engineer-agentic-systems",
   "phase": 1,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "duration_days_suggestion": 7,
   "assessment_mode": "code-plus-human-review",
   "requires_private_grading_worker": true,
   "learner_visible_test_command": "python -m unittest discover -s tests -v",
   "review_questions": 5,
-  "status": "original-starter-prototype"
+  "status": "seeded-proofloop-assignment"
 }
