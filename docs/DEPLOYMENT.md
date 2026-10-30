@@ -1,3 +1,5 @@
+> **v2 note:** This earlier guide covers the original Next.js frontend. The added Django curriculum service needs its own deployment and PostgreSQL database. Follow `DJANGO_CMS_SETUP.md` for full-stack steps and environment variables; otherwise the frontend intentionally falls back to local demo curriculum.
+
 # Local development and Render deployment
 
 ## Local

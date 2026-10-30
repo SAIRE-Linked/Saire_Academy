@@ -2,7 +2,7 @@ export type Phase = {
   id: number;
   name: string;
   duration: number;
-  category: "foundations" | "intelligence" | "agents";
+  category: string;
   desc: string;
   topics: string[];
   project: string;
@@ -15,7 +15,7 @@ export type Lesson = {
  minutes: number;
  difficulty: string;
  objective: string;
- sections: { heading: string; body: string; code?: string; note?: string }[];
+ sections: { heading: string; body: string; code?: string; note?: string; language?: string }[];
  challenge: string;
 };
 export const phases: Phase[] = [

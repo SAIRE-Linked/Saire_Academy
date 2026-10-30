@@ -5,3 +5,16 @@ out
 .env.local
 *.log
 .DS_Store
+
+# Django, secrets, and generated dependencies
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.sqlite3
+backend/db.sqlite3
+backend/staticfiles/
+backend/.venv/
+backend/.env
+.env.local
+.env.production
+node_modules/
+.next/

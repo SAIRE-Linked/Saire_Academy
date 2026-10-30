@@ -1,3 +1,5 @@
+> **Current checkpoint (Django CMS v2, 30 October 2026):** Course, module, topic, lesson, section, quiz and project models, read-only public APIs, Django Admin and initial seed import are implemented in `backend/`. Any references below to future backend implementation mean **learner account and authenticated LMS workflows**. Read `DJANGO_CMS_SETUP.md` for the implemented CMS.
+
 # Architecture: From Growth MVP to Full SAIRE-Linked LMS
 
 ## Current MVP architecture

@@ -1,8 +1,57 @@
+# SAIRE-Linked Digital Learning Platform — Django CMS Edition (v2)
+
+**Build Smarter. Learn Deeper.** This upgraded project preserves the original animated Next.js learning website and adds a real Django + Django REST Framework curriculum management backend.
+
+### What's new in v2
+
+- **Django Admin content management:** create/update courses, phases, topics, lessons, copyable code examples, quizzes, and portfolio projects without editing React source files.
+- **Draft/publish workflow:** prepare unpublished courses and lessons privately, then publish them when ready.
+- **Live read-only curriculum API:** all published content appears in the frontend after refresh; the homepage now offers a course selector and a catalogue when multiple courses exist.
+- **Original programme preserved:** safe idempotent import loads all 12 phases, 72 topics, 4 introductory lessons, 12 projects and Lesson 1 quiz. Running the import again never overwrites existing admin edits.
+- **PostgreSQL-ready:** SQLite works for local development; PostgreSQL connects through `DATABASE_URL`. A development Docker Compose stack is included.
+- **Branded administration:** SAIRE-Linked colours and logo appear in Django Admin; the original frontend branding and Framer Motion interactions remain.
+- **Separate per-course learner progress:** saved locally in the browser, including compatibility with the original default course's progress.
+
+**First read:** [`docs/DJANGO_CMS_SETUP.md`](docs/DJANGO_CMS_SETUP.md) — complete Windows/VS Code setup, admin workflows, API, deployment, production limitations, and hands-on tests.
+
+### Quick setup (Windows PowerShell)
+
+Terminal 1 — backend:
+
+```powershell
+cd backend
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_curriculum
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Terminal 2 — frontend (from project root):
+
+```powershell
+Copy-Item .env.local.example .env.local
+npm install
+npm run dev
+```
+
+- Website: **http://localhost:3000**
+- Content admin: **http://127.0.0.1:8000/admin/**
+- Published course API: **http://127.0.0.1:8000/api/v1/courses/**
+
+Alternative: `docker compose up --build` for Next.js + Django + PostgreSQL. Then create the staff account with `docker compose exec backend python manage.py createsuperuser`.
+
+**Scope:** This is an *editable-curriculum Growth-package MVP*, **not** a finished subscription-based multi-user LMS. Learner progress and quiz grading are browser-local; no real enrolments, account login, payment, certificates or secure exams have been implemented. The offline HTML preview is a separate static demo and does not sync with Django.
+
+---
+
 # SAIRE-Linked Digital Learning Platform
 
 **Build Smarter. Learn Deeper.**
 
-A custom-branded, responsive, interactive learning-management **MVP** for the AI Engineer & Agentic Systems Mastery Programme. Developed for SAIRE-Linked, using the uploaded SAIRE-Linked logo assets and a blue/green premium technology aesthetic.
+The original custom-branded, responsive learning-management **MVP** for the AI Engineer & Agentic Systems Mastery Programme. Developed for SAIRE-Linked, using the uploaded SAIRE-Linked logo assets and a blue/green premium technology aesthetic.
 
 ## What's inside
 
@@ -20,9 +69,9 @@ A custom-branded, responsive, interactive learning-management **MVP** for the AI
 
 ### Important scope distinction
 
-This is a **working, frontend-first Growth-package MVP**, not a multi-user production LMS. **There is no login, backend database, payment processing, email automation, server-side progress storage, or actual Python execution sandbox yet.** Browser progress is not secure, private across shared devices, or synchronized across devices. The complete 12-phase **syllabus** is published, but only the first **four detailed lessons** have been authored in this initial build. Additional tutorials, quizzes, and project workbooks must be produced phase by phase. Do not advertise the other 68 topics as fully taught yet.
+This is a **working, Django-managed curriculum Growth-package MVP**, not a multi-user production LMS. **Django now provides the curriculum backend and content database. There is still no learner login, payment processing, email automation, server-side progress storage, or Python execution sandbox.** Browser progress is not secure, private across shared devices, or synchronized across devices. The complete 12-phase **syllabus** is published, but only the first **four detailed lessons** have been authored in this initial build. Additional tutorials, quizzes, and project workbooks must be produced phase by phase. Do not advertise the other 68 topics as fully taught yet.
 
-The larger SAIRE-Linked product vision includes a later authenticated LMS backend, course authoring and admin, enrolment, cross-device syncing, assessments, downloadable certificates, analytics and payment integrations. See `docs/PRODUCTION_ARCHITECTURE.md`.
+The larger SAIRE-Linked product vision builds upon the implemented course authoring/admin to add enrolment, cross-device syncing, assessments, downloadable certificates, analytics and payment integrations. See `docs/PRODUCTION_ARCHITECTURE.md`.
 
 ## Open an interactive preview immediately (no installation)
 
@@ -73,11 +122,20 @@ app/
 components/
   LearningPlatform.tsx     Interactive LMS UI and local learning state
 data/
-  curriculum.ts            Phases, lessons, quizzes, projects, study plan, resources
+  curriculum.ts            Original offline/demo fallback and study plan
+lib/
+  lms-api.ts               Type-safe fetcher and Django API contract
+backend/
+  courses/                 Django models, admin, read-only API, seed command and tests
+  config/                  Django settings and URLs
+  content/                 Original AI course seed JSON
+  requirements.txt         Python dependencies
+  manage.py                Django CLI
 public/
   brand/                   3 uploaded PNG logos + optimized WebPs
   preview/                 Dependency-free interactive preview
 docs/
+  DJANGO_CMS_SETUP.md       Start here for full-stack setup
   PRODUCTION_ARCHITECTURE.md
   DEPLOYMENT.md
 scripts/
@@ -90,8 +148,8 @@ render.yaml                Render configuration
 
 1. **Core UX refinement and content:** review the designs, publish further Phase 1 lessons and add more assessments.
 2. **Authentication:** secure registration/login, roles (admin, instructor, learner), reset links, account verification.
-3. **Persistent LMS API:** Django + DRF + PostgreSQL, lessons, enrolments, progress, notes, assessments and teacher admin.
-4. **Admin curriculum editor:** rich text, lesson revisions, unpublished drafts and content version history.
+3. **Next LMS API layer:** extend existing Django + DRF models with enrolments, authenticated progress, notes, secure assessments and teacher roles.
+4. **Next admin enhancements:** rich text/Markdown authoring, media uploads, lesson revisions and content version history. Plain-text sections and draft publishing already work.
 5. **Secure product features:** subscription billing (only after deciding on a business model), audit logging, uploads, analytics, accessibility, monitoring and comprehensive automated tests.
 6. **Production rollout:** release process, learner migration from demo state, backups and South African POPIA considerations.
 

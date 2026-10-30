@@ -1,0 +1,13 @@
+/* SAIRE-Linked administration brand accent, layered on Django's accessible admin. */
+:root { --primary:#101f30; --secondary:#102b36; --accent:#29d4b0; --header-bg:#0d1b2a; --header-color:#fff; --link-fg:#167f7a; --link-hover-color:#0a8e74; --selected-bg:#e7fbf3; --button-bg:#118779; --button-hover-bg:#0a695f; --default-button-bg:#1158a6; --default-button-hover-bg:#0b4183; }
+#header { background:linear-gradient(102deg,#0c1b2b,#113f4e); color:#eefcff; }
+#branding { display:flex; align-items:center; }
+.saire-admin-brand { display:flex; gap:10px; align-items:center; color:white; font-size:18px; letter-spacing:-.025em; }
+.saire-admin-brand img { object-fit:contain; }
+.saire-admin-brand span { color:#55e0bf; }
+.saire-admin-brand small { display:block; font-size:9px; letter-spacing:.17em; color:#b5d8d7; margin-top:2px; }
+#user-tools a { color:#d8eee9; }
+div.breadcrumbs { background:#145467; }
+.module h2, .module caption, .inline-group h2 { background:#123848; }
+.button.default, input[type=submit].default { background:#1263aa; }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after {transition:none!important;} }

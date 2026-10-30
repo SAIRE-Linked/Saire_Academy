@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'courses/admin.css' %}">
+{% endblock %}
+{% block branding %}
+<div class="saire-admin-brand">
+  <img src="{% static 'courses/saire-symbol.webp' %}" alt="SAIRE-Linked" width="40" height="40">
+  <div><strong>SAIRE<span>-Linked</span></strong><small>DIGITAL LEARNING CMS</small></div>
+</div>
+{% endblock %}
