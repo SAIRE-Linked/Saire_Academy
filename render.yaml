@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: saire-digital-learning
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22.16.0"
