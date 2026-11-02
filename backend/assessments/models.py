@@ -117,6 +117,11 @@ class CodeReview(models.Model):
 
     def save(self, *args, **kwargs):
         from django.db import transaction
+        # A completed independent run is the source of truth for test marks.
+        # Instructor grading controls code defence and code quality only.
+        job = getattr(self.submission, 'grading_job', None)
+        if job is not None and job.status == GradingJob.COMPLETE:
+            self.verified_test_score = job.verified_test_score
         self.full_clean()
         self.final_score = self.calculate_final_score()
         with transaction.atomic():
@@ -125,3 +130,44 @@ class CodeReview(models.Model):
 
     def __str__(self):
         return f'{self.submission} · {self.final_score}%'
+
+
+class GradingJob(models.Model):
+    """A grading request, consumed only by a separately deployed worker.
+
+    Repository authorization is an explicit instructor action in v5; we do not
+    pretend a GitHub URL proves learner ownership. This record never holds code.
+    """
+    WAITING = 'awaiting_approval'
+    QUEUED = 'queued'
+    RUNNING = 'running'
+    COMPLETE = 'complete'
+    ERROR = 'error'
+    STATUSES = [(WAITING, 'Instructor repo approval required'),
+                (QUEUED, 'Ready for isolated grader'),
+                (RUNNING, 'Grading in progress'),
+                (COMPLETE, 'Independently graded'),
+                (ERROR, 'Infrastructure or verification error')]
+    submission = models.OneToOneField(Submission, on_delete=models.PROTECT,
+                                      related_name='grading_job')
+    status = models.CharField(max_length=24, choices=STATUSES, default=WAITING, db_index=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                     null=True, blank=True, related_name='approved_grading_jobs')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    claim_token = models.UUIDField(null=True, blank=True, editable=False)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    github_commit_verified = models.BooleanField(default=False)
+    verified_test_score = models.PositiveSmallIntegerField(null=True, blank=True, validators=SCORE)
+    tests_passed = models.PositiveSmallIntegerField(default=0)
+    tests_failed = models.PositiveSmallIntegerField(default=0)
+    tests_errors = models.PositiveSmallIntegerField(default=0)
+    execution_log = models.TextField(blank=True)
+    failure_reason = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return f'{self.submission_id}: {self.get_status_display()}'

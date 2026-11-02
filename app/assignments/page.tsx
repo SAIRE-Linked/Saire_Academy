@@ -12,7 +12,8 @@ type Assignment = {
   review_questions:string[];grading:Record<string,number>;template_url:string;
 };
 type Review = {final_score:string;feedback:string;question_scores:number[];verified_test_score:number};
-type Submission = {id:number;commit_sha:string;status:string;submitted_at:string;late_days:number;review:Review|null};
+type Grading = {status:"awaiting_approval"|"queued"|"running"|"complete"|"error";github_commit_verified:boolean;verified_test_score:number|null;passed:number;failed:number;errors:number;failure_reason:string;completed_at:string|null};
+type Submission = {id:number;commit_sha:string;status:string;submitted_at:string;late_days:number;review:Review|null;grading:Grading|null};
 type Attempt = {id:string;started_at:string;due_at:string;submissions:Submission[]};
 
 const fade={initial:{opacity:0,y:15},animate:{opacity:1,y:0},transition:{duration:.4}};
@@ -94,7 +95,7 @@ export default function ProofLoopPage(){
     try{
       await request(`/assignments/${selected.slug}/submit/`,{repository_url:repo,commit_sha:sha,
         local_tests_passed:0,local_tests_failed:0,local_tests_errors:0});
-      setMessage("Commit recorded. Independent tests and instructor review are still pending.");
+      setMessage("Commit recorded. An instructor must approve the repository before independent grading begins.");
       setRepo("");setSha("");await refresh(selected.slug);
     }catch(err){setError(err instanceof Error?err.message:"Submission failed.");}
     finally{setLoading(false);}
@@ -102,7 +103,7 @@ export default function ProofLoopPage(){
   function pick(slug:string){setChosen(slug);setMessage("");setError("");setAttempt(null);if(token)void refresh(slug);}
 
   return <main className="proofloop-page">
-    <div className="proofloop-back"><a href="/"><ArrowLeft size={16}/> Back to Academy</a><span>SAIRE-LINKED / PROOFLOOP v0.1</span></div>
+    <div className="proofloop-back"><a href="/"><ArrowLeft size={16}/> Back to Academy</a><span>SAIRE-LINKED / PROOFLOOP v0.2</span></div>
     <motion.header {...fade} className="proofloop-hero">
       <div className="proofloop-hero-icon"><img src="/brand/saire-symbol.webp" alt="SAIRE-Linked Academy logo"/></div>
       <div><div className="proofloop-eyebrow"><span/> THE ENGINEERING APPRENTICESHIP ENGINE</div>
@@ -139,7 +140,7 @@ export default function ProofLoopPage(){
             {!attempt?<button className="proofloop-primary" disabled={loading} onClick={begin}><Code2 size={18}/> Start project and set deadline</button>:<>
               <div className="proofloop-deadline"><CalendarClock size={19}/><div><small>YOUR PROJECT DEADLINE</small><strong>{new Date(attempt.due_at).toLocaleString()}</strong></div></div>
               <div className="proofloop-actions"><button className="proofloop-primary" onClick={starter} disabled={!selected.has_starter||loading}><Download size={18}/> Download starter</button><button className="proofloop-secondary" onClick={()=>refresh(selected.slug)} disabled={loading}>Refresh status</button></div>
-              <h3>Submit a pushed GitHub commit</h3><p>Use the CLI for the easiest experience. This web form records a commit, but does not verify test correctness.</p>
+              <h3>Submit a pushed GitHub commit</h3><p>Use the CLI for the easiest experience. An instructor approves your repository before a separate worker verifies the GitHub commit and runs trusted tests. You can then complete your code defence.</p>
               <form className="proofloop-submit" onSubmit={submit}>
                 <label htmlFor="pl-repo">GitHub repository URL</label><input id="pl-repo" required placeholder="https://github.com/you/project" value={repo} onChange={e=>setRepo(e.target.value)}/>
                 <label htmlFor="pl-sha">40-character Git commit SHA</label><input id="pl-sha" required minLength={40} maxLength={40} placeholder="git rev-parse HEAD" value={sha} onChange={e=>setSha(e.target.value)}/>
@@ -147,7 +148,15 @@ export default function ProofLoopPage(){
               </form>
               {attempt.submissions.length>0&&<div className="proofloop-history"><h3>Your submissions</h3>{attempt.submissions.map(s=><div className="proofloop-submission" key={s.id}>
                 <div><code>{s.commit_sha.slice(0,12)}</code><small>{new Date(s.submitted_at).toLocaleString()} · {s.late_days===0?"On time":`${s.late_days} late day(s)`}</small></div>
-                <strong>{s.review?`${s.review.final_score}% · Reviewed`:"Review pending"}</strong>{s.review?.feedback&&<p>{s.review.feedback}</p>}
+                <strong>{s.review?`${s.review.final_score}% · Reviewed`:"Code defence pending"}</strong>
+                {s.grading&&<div className="proofloop-grade"><ShieldCheck size={15}/>
+                  {s.grading.status==="awaiting_approval"&&"Waiting for instructor repository approval"}
+                  {s.grading.status==="queued"&&"Approved · Waiting for isolated grader"}
+                  {s.grading.status==="running"&&"Independent grading in progress"}
+                  {s.grading.status==="complete"&&`GitHub commit verified · ${s.grading.verified_test_score}% tests (${s.grading.passed} passed, ${s.grading.failed} failed, ${s.grading.errors} errors)`}
+                  {s.grading.status==="error"&&`Grading error · ${s.grading.failure_reason || "Ask the instructor to review"}`}
+                </div>}
+                {s.review?.feedback&&<p>{s.review.feedback}</p>}
               </div>)}</div>}
             </>}
           </div>}
@@ -155,6 +164,6 @@ export default function ProofLoopPage(){
         </>:<div className="proofloop-empty">Choose a published assignment to get started.</div>}
       </motion.section>
     </div>
-    <div className="proofloop-footnote"><ShieldCheck size={17}/> Local test reports are untrusted learner evidence. Official scores are published only after an instructor verifies results and completes a code review. Learner code is never executed by this Django API.</div>
+    <div className="proofloop-footnote"><ShieldCheck size={17}/> Local test reports are advisory. Instructor-approved submissions are tested on a separate restricted worker, never inside Django. Final grades combine those results with a human code defence and code-quality review.</div>
   </main>;
 }

@@ -1,7 +1,9 @@
 from django.urls import path
-from . import api
+from . import api, worker_api
 
 urlpatterns = [
+    path('internal/grading/claim/', worker_api.claim, name='grading-claim'),
+    path('internal/grading/report/', worker_api.report, name='grading-report'),
     path('auth/login/', api.login, name='proofloop-login'),
     path('auth/logout/', api.logout, name='proofloop-logout'),
     path('auth/me/', api.me, name='proofloop-me'),

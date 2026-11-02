@@ -1,4 +1,4 @@
-"""SAIRE Academy CLI v0.1. All local tests are advisory, not instructor-verified."""
+"""SAIRE Academy CLI v0.2. All local tests are advisory, not instructor-verified."""
 import argparse
 import getpass
 import json
@@ -233,7 +233,7 @@ def cmd_submit(args):
         'local_tests_errors': int(report.get('errors', 0)),
     })
     print('Submitted:', result['submission']['commit_sha'])
-    print('Status: awaiting independent instructor verification and code defence.')
+    print('Status: awaiting instructor repository approval, independent grading and code defence.')
     print('Local test results are advisory and do not constitute an official grade.')
 
 
@@ -244,6 +244,13 @@ def cmd_grade(args):
     for s in attempt['submissions']:
         score = s['review']['final_score'] + '%' if s['review'] else 'Review pending'
         print(s['commit_sha'][:12], s['status'], '—', score, '| late days:', s['late_days'])
+        grading = s.get('grading')
+        if grading:
+            print('  Independent grading:', grading['status'])
+            if grading['status'] == 'complete':
+                print('  Verified tests:', grading['verified_test_score'], '%; GitHub commit verified:', grading['github_commit_verified'])
+            if grading['status'] == 'error':
+                print('  Runner error:', grading['failure_reason'])
         if s['review'] and s['review']['feedback']:
             print('Instructor feedback:', s['review']['feedback'])
 

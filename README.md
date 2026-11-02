@@ -1,3 +1,13 @@
+# SAIRE-Linked Academy — ProofLoop v5 (isolated grading prototype)
+
+**Newest build:** independent grading queue, instructor repository approval, exact GitHub commit verification, trusted test suite on a separate restricted worker, automated evidence and assessment dashboard. Original LMS curriculum, Next.js UI, Django Admin, learner CLI, and v4 assignments are retained.
+
+> **Start here:** `docs/PROOFLOOP_V5_GRADING.md` for detailed Windows backend, Linux worker, workflow, verification, limits and security instructions.
+
+**Important:** Do not run the Docker grading worker on the same machine as Django in a public environment; a Docker container is not by itself a strong isolation boundary for hostile submissions. Instructor authorization is required. Backend GitHub App provisioning and fully hardened grading remain future milestones.
+
+---
+
 # SAIRE-Linked Academy — ProofLoop v4
 
 **New:** Authenticated Django assessments, original starter assignment ZIPs, recorded assignment deadlines and commit-based submissions, instructor code-defence scoring, a `/assignments` React workspace, and the `saire` Python CLI.

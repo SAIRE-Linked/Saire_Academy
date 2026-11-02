@@ -1,6 +1,8 @@
 """ProofLoop instructor desk. Grades are entered by staff, never by learners."""
 from django.contrib import admin
-from .models import Assignment, AssignmentAttempt, Submission, CodeReview
+from .models import Assignment, AssignmentAttempt, Submission, CodeReview, GradingJob
+from django.utils import timezone
+from datetime import timedelta
 
 
 @admin.register(Assignment)
@@ -58,7 +60,81 @@ class CodeReviewAdmin(admin.ModelAdmin):
         ('Five code-defence answers (0–10 each)', {'fields': ('q1_score', 'q2_score', 'q3_score', 'q4_score', 'q5_score')}),
         ('Outcome', {'fields': ('feedback', 'final_score')}),
     ]
+    def get_readonly_fields(self, request, obj=None):
+        base = list(super().get_readonly_fields(request, obj))
+        if obj and getattr(getattr(obj.submission, 'grading_job', None), 'status', None) == GradingJob.COMPLETE:
+            base.append('verified_test_score')
+        return base
+
     def save_model(self, request, obj, form, change):
         if not obj.pk:
             obj.reviewer = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(GradingJob)
+class GradingJobAdmin(admin.ModelAdmin):
+    list_display = ('submission', 'status', 'approved_by', 'approved_at',
+                    'github_commit_verified', 'verified_test_score', 'completed_at')
+    list_filter = ('status', 'github_commit_verified', 'submission__attempt__assignment')
+    search_fields = ('submission__attempt__learner__username', 'submission__commit_sha', 'submission__repository_url')
+    readonly_fields = ('submission', 'status', 'approved_by', 'approved_at', 'claim_token',
+                       'claimed_at', 'completed_at', 'github_commit_verified',
+                       'verified_test_score', 'tests_passed', 'tests_failed',
+                       'tests_errors', 'execution_log', 'failure_reason', 'created_at')
+    actions = ('approve_repository_for_grading', 'requeue_failed_job', 'recover_stale_running_job')
+
+    @admin.action(description='Approve selected repositories and queue for isolated grading')
+    def approve_repository_for_grading(self, request, queryset):
+        if not request.user.has_perm('assessments.change_gradingjob'):
+            self.message_user(request, 'You lack grading permission.', level='ERROR')
+            return
+        approved = 0
+        for job in queryset.select_related('submission'):
+            if job.status != GradingJob.WAITING:
+                continue
+            # Instructor must independently confirm this repository belongs to
+            # the correct learner and that they can access the submitted commit.
+            job.status = GradingJob.QUEUED
+            job.approved_by = request.user
+            job.approved_at = timezone.now()
+            job.save(update_fields=['status', 'approved_by', 'approved_at'])
+            approved += 1
+        self.message_user(request, f'{approved} grading jobs approved. Confirm repository ownership before using this action.')
+
+    @admin.action(description='Requeue failed grading jobs (review error first)')
+    def requeue_failed_job(self, request, queryset):
+        if not request.user.has_perm('assessments.change_gradingjob'):
+            return
+        count = 0
+        for job in queryset:
+            if job.status != GradingJob.ERROR or not job.approved_at:
+                continue
+            job.status = GradingJob.QUEUED
+            job.claim_token = None
+            job.failure_reason = ''
+            job.save(update_fields=['status', 'claim_token', 'failure_reason'])
+            count += 1
+        self.message_user(request, f'{count} error jobs requeued.')
+
+    @admin.action(description='Mark stalled running jobs as errors (after 15 minutes)')
+    def recover_stale_running_job(self, request, queryset):
+        if not request.user.has_perm('assessments.change_gradingjob'):
+            return
+        deadline = timezone.now() - timedelta(minutes=15)
+        count = 0
+        for job in queryset:
+            if job.status != GradingJob.RUNNING or not job.claimed_at or job.claimed_at > deadline:
+                continue
+            job.status = GradingJob.ERROR
+            job.claim_token = None
+            job.failure_reason = 'Instructor marked stalled worker run for review'
+            job.save(update_fields=['status', 'claim_token', 'failure_reason'])
+            count += 1
+        self.message_user(request, f'{count} stalled grading jobs marked as errors. Investigate before requeueing.')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

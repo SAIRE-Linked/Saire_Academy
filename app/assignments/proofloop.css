@@ -6,3 +6,5 @@
 @media(max-width:950px){.proofloop-hero-badge{display:none}.proofloop-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.proofloop-back span{display:none}.proofloop-hero{align-items:start}.proofloop-hero-icon{height:65px;width:65px}.proofloop-hero h1{font-size:32px}.proofloop-panel{padding:18px}.proofloop-grid{gap:14px}.proofloop-actions button{flex:1}}
 @media(prefers-reduced-motion:reduce){.proofloop-choice,.proofloop-primary{transition:none}.proofloop-choice:hover,.proofloop-primary:hover{transform:none}}
+
+.proofloop-grade{display:flex;align-items:start;gap:8px;width:100%;font-size:12px;line-height:1.6;color:#a8decf;background:#11332f;border:1px solid #27564e;padding:10px;border-radius:9px}.proofloop-grade svg{flex-shrink:0;margin-top:2px;color:#37d1a9}

@@ -15,7 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
-from .models import Assignment, AssignmentAttempt, Submission
+from .models import Assignment, AssignmentAttempt, Submission, GradingJob
 
 
 class LoginThrottle(AnonRateThrottle):
@@ -41,7 +41,14 @@ def public_data(a):
 
 def submission_data(s):
     review = getattr(s, 'review', None)
+    job = getattr(s, 'grading_job', None)
     return {
+        'grading': ({'status': job.status, 'github_commit_verified': job.github_commit_verified,
+                     'verified_test_score': job.verified_test_score,
+                     'passed': job.tests_passed, 'failed': job.tests_failed, 'errors': job.tests_errors,
+                     'failure_reason': job.failure_reason if job.status == GradingJob.ERROR else '',
+                     'completed_at': job.completed_at.isoformat() if job.completed_at else None}
+                    if job else None),
         'id': s.pk, 'commit_sha': s.commit_sha, 'repository_url': s.repository_url,
         'submitted_at': s.submitted_at.isoformat(), 'status': s.status,
         'late_days': s.late_days,
@@ -178,6 +185,8 @@ def submit(request, slug):
             defaults={'repository_url': url, 'local_tests_passed': passed,
                       'local_tests_failed': failed, 'local_tests_errors': errors},
         )
+        if created:
+            GradingJob.objects.create(submission=s)
     if not created and s.repository_url != url:
         raise ValidationError({'repository_url': 'This commit was already submitted from a different repository.'})
     return Response({'created': created, 'submission': submission_data(s)}, status=201 if created else 200)
