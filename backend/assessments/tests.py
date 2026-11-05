@@ -10,6 +10,21 @@ from .models import Assignment, AssignmentAttempt, CodeReview, Submission
 
 
 class ProofLoopApiTests(TestCase):
+
+    # v10: these regression tests exercise already-unlocked assignment workflows.
+    # Locked modules and learners are tested independently in progression/tests.py.
+    def grant_lesson_prerequisites(self):
+        from progression.models import LessonIteration
+        from courses.models import Lesson, Module
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+        from datetime import timedelta
+        for module in Module.objects.all():
+            lesson = Lesson.objects.create(module=module, title='Completed prerequisite', published=True)
+            for user in get_user_model().objects.all():
+                LessonIteration.objects.create(learner=user, lesson=lesson, started_at=timezone.now(),
+                    due_at=timezone.now()+timedelta(days=14), status='passed', raw_score=100, credited_score=100)
+
     @classmethod
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user('student1', password='SafeTestPassword123!')
@@ -24,13 +39,17 @@ class ProofLoopApiTests(TestCase):
         cls.other_token = Token.objects.create(user=cls.other)
         cls.sha = 'a' * 40
 
+    def setUp(self):
+        self.grant_lesson_prerequisites()
+
     def auth(self, token=None):
         return {'HTTP_AUTHORIZATION': f'Token {(token or self.token).key}'}
 
     def test_only_published_visible(self):
         response = self.client.get('/api/v1/assignments/')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()[0]['review_questions'], ['Q1?', 'Q2?', 'Q3?', 'Q4?', 'Q5?'])
+        self.assertTrue(response.json()[0]['locked'])
+        self.assertNotIn('review_questions', response.json()[0])
         self.assignment.published=False;self.assignment.save()
         self.assertEqual(self.client.get('/api/v1/assignments/').json(), [])
         self.assertEqual(self.client.get('/api/v1/assignments/saire-quotation-engine/').status_code, 404)

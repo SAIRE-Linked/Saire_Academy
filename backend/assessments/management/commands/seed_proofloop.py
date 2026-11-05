@@ -24,7 +24,7 @@ class Command(BaseCommand):
                 'module': module, 'title': 'SAIRE Quotation Engine',
                 'brief': 'Build a reusable Python quotation calculator for a digital services company. Validate inputs, use Decimal arithmetic, write regression tests, and explain your implementation.',
                 'learning_outcomes': 'Write reusable Python functions\nValidate user and financial inputs\nUse Decimal for money\nWrite independent unit tests\nExplain design trade-offs',
-                'duration_days': 7, 'published': True,
+                'duration_days': 7, 'published': True, 'module_pass_score': 70,
                 'q1': 'Why is Decimal preferable to float for monetary values?',
                 'q2': 'How does your implementation reject invalid input?',
                 'q3': 'How did you break the problem into separate functions?',

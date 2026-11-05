@@ -22,7 +22,10 @@ class LoginThrottle(AnonRateThrottle):
     rate = '5/minute'
 
 
-def visible():
+def visible(user=None):
+    from progression.services import admin_access
+    if user is not None and admin_access(user):
+        return Assignment.objects.all().select_related('module__course')
     return Assignment.objects.filter(published=True, module__published=True, module__course__status='published').select_related('module__course')
 
 
@@ -94,25 +97,31 @@ def logout(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
-    return Response({'username': request.user.get_username(), 'staff': request.user.is_staff})
+    return Response({'username': request.user.get_username(), 'staff': request.user.is_staff, 'admin': request.user.is_superuser})
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def assignments(request):
-    return Response([public_data(a) for a in visible()])
+    from progression.services import module_access
+    return Response([public_data(a) if module_access(request.user, a.module) else {'slug': a.slug, 'title': a.title, 'locked': True, 'module': a.module.name, 'phase': a.module.position} for a in visible(request.user)])
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def assignment_detail(request, slug):
-    return Response(public_data(get_object_or_404(visible(), slug=slug)))
+    a = get_object_or_404(visible(request.user), slug=slug)
+    from progression.services import require_module
+    require_module(request.user, a.module)
+    return Response(public_data(a))
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def start(request, slug):
-    a = get_object_or_404(visible(), slug=slug)
+    a = get_object_or_404(visible(request.user), slug=slug)
+    from progression.services import require_module
+    require_module(request.user, a.module)
     with transaction.atomic():
         started = timezone.now()
         attempt, created = AssignmentAttempt.objects.get_or_create(
@@ -126,7 +135,9 @@ def start(request, slug):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_attempt(request, slug):
-    a = get_object_or_404(visible(), slug=slug)
+    a = get_object_or_404(visible(request.user), slug=slug)
+    from progression.services import require_module
+    require_module(request.user, a.module)
     attempt = get_object_or_404(AssignmentAttempt.objects.select_related('assignment'), learner=request.user, assignment=a)
     return Response(attempt_data(attempt))
 
@@ -134,8 +145,12 @@ def my_attempt(request, slug):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def starter(request, slug):
-    a = get_object_or_404(visible(), slug=slug)
-    get_object_or_404(AssignmentAttempt, learner=request.user, assignment=a)
+    a = get_object_or_404(visible(request.user), slug=slug)
+    from progression.services import require_module
+    require_module(request.user, a.module)
+    from progression.services import admin_access
+    if not admin_access(request.user):
+        get_object_or_404(AssignmentAttempt, learner=request.user, assignment=a)
     if not a.starter_bundle:
         raise Http404('Starter ZIP not yet published')
     try:
@@ -169,7 +184,9 @@ def positive_test_count(data, key):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit(request, slug):
-    a = get_object_or_404(visible(), slug=slug)
+    a = get_object_or_404(visible(request.user), slug=slug)
+    from progression.services import require_module
+    require_module(request.user, a.module)
     attempt = get_object_or_404(AssignmentAttempt, learner=request.user, assignment=a)
     url = validate_repository(request.data.get('repository_url'))
     sha = request.data.get('commit_sha')

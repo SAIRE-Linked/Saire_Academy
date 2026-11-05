@@ -13,6 +13,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         data = json.loads(SEED.read_text(encoding="utf-8"))
+        checks = json.loads(SEED.with_name("foundations_checks_v102.json").read_text(encoding="utf-8-sig"))
+        checks["p1-l1"] = data["quiz"]
         with transaction.atomic():
             if Course.objects.filter(slug=data["slug"]).exists():
                 self.stdout.write(self.style.WARNING(
@@ -51,14 +53,15 @@ class Command(BaseCommand):
                                   note=section.get("note", ""))
                     for i, section in enumerate(item["sections"], start=1)
                 ])
-                if lesson.public_id == "p1-l1":
+                questions = checks.get(lesson.public_id, [])
+                if questions:
                     QuizQuestion.objects.bulk_create([
                         QuizQuestion(
                             lesson=lesson, position=i, question=q["question"],
                             option_a=q["answers"][0], option_b=q["answers"][1],
                             option_c=q["answers"][2], option_d=q["answers"][3],
                             correct=q["correct"], reason=q["reason"],
-                        ) for i, q in enumerate(data["quiz"], start=1)
+                        ) for i, q in enumerate(questions, start=1)
                     ])
             for item in data["projects"]:
                 Project.objects.create(

@@ -30,9 +30,10 @@ class PublishedCurriculumApiTests(TestCase):
         data = response.json()
         self.assertEqual(data["phases"][0]["topics"], ["Variables"])
         self.assertEqual(len(data["lessons"]), 1)
-        self.assertEqual(data["lessons"][0]["sections"][0]["body"], "Names bind to objects")
-        self.assertEqual(data["lessons"][0]["quiz"][0]["correct"], 0)
-        self.assertEqual(data["projects"][0]["skills"], ["Python", "Git"])
+        self.assertNotIn('sections',data['lessons'][0])
+        self.assertNotIn('quiz',data['lessons'][0])
+        self.assertTrue(data['projects'][0]['locked'])
+        self.assertNotIn('skills', data['projects'][0])
 
     def test_unpublished_course_not_available(self):
         self.assertEqual(self.client.get("/api/v1/courses/not-live/").status_code, 404)

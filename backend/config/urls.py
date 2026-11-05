@@ -7,8 +7,12 @@ admin.site.site_title = "SAIRE-Linked CMS"
 admin.site.index_title = "Courses and curriculum management"
 
 urlpatterns = [
+    path("accounts/", include("allauth.urls")),
+    path("api/v1/", include("progression.urls")),
     path("admin/", admin.site.urls),
     path("api/v1/health/", health, name="health"),
     path("api/v1/", include("courses.urls")),
     path("api/v1/", include("assessments.urls")),
+    path("api/v1/", include("mentoring.urls")),
+    path("api/v1/", include("learning_twin.urls")),
 ]

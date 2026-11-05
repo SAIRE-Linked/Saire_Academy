@@ -1,0 +1,28 @@
+{% extends "allauth/layouts/base.html" %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="/academy-auth.css">
+{% endblock %}
+
+{% block body %}
+  <main class="academy-entry entry-auth">
+    <header class="entry-header">
+      <a class="entry-brand" href="/">
+        <img src="/brand/saire-symbol.webp" alt="">
+        <span>SAIRE-Linked Academy</span>
+      </a>
+      <a href="/">Back to the Academy</a>
+    </header>
+    <section class="entry-card">
+      <p class="entry-eyebrow">YOUR LEARNING SPACE</p>
+      {% if messages %}
+        <ul class="entry-messages" aria-live="polite">
+          {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </section>
+    <footer>SAIRE-Linked Academy · Powered by ProofLoop</footer>
+  </main>
+{% endblock %}

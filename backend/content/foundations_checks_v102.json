@@ -1,0 +1,20 @@
+{
+  "p1-l2": [
+    {"question":"What type does input() return before any conversion?","answers":["An integer","A string","A boolean","A float"],"correct":1,"reason":"input() reads text. Convert that string explicitly when you need a number."},
+    {"question":"What is the value of int('12') + 3?","answers":["'123'","'15'","15","12"],"correct":2,"reason":"int converts the string to an integer before addition."},
+    {"question":"Which expression correctly checks whether a quantity is equal to zero?","answers":["quantity == 0","quantity = 0","quantity is '0'","int = quantity"],"correct":0,"reason":"== compares values. A single = assigns a value."},
+    {"question":"What should a program do if a customer enters 'three' where an integer is expected?","answers":["Multiply the raw string","Always substitute zero","Assume the input will convert","Handle the conversion error and request a valid number"],"correct":3,"reason":"Invalid numeric text can raise ValueError. Handle the error and explain the expected input."}
+  ],
+  "p1-l3": [
+    {"question":"When does Python consider an elif branch?","answers":["Before the if condition","Whenever its condition is true, even after a prior match","Only if the earlier conditions in the chain were false","Only after an else branch"],"correct":2,"reason":"An if/elif chain runs the first matching branch."},
+    {"question":"How many times does for item in range(3) run its body?","answers":["Three","Two","Four","Until item reaches a value greater than three"],"correct":0,"reason":"range(3) yields 0, 1 and 2."},
+    {"question":"What can make a while loop run forever?","answers":["Using a comparison","Using break inside it","Indenting its body","Leaving its condition true without a way to exit"],"correct":3,"reason":"A while loop continues as long as its condition is true unless it exits another way."},
+    {"question":"Which input should be rejected before calculating a price that requires a positive quantity?","answers":["Quantity 1","Quantity 0","Quantity 2","Quantity 100"],"correct":1,"reason":"A positive number must be greater than zero."}
+  ],
+  "p1-l4": [
+    {"question":"What does return do in a function?","answers":["It prints a value automatically","It repeats the function","It defines a global variable","It ends the function call and gives a value to the caller"],"correct":3,"reason":"A return value can be stored, tested or reused by the caller."},
+    {"question":"Which design makes a discount calculation easier to test?","answers":["Ask for input inside every calculation","Take price and discount as parameters and return the result","Print the answer and return nothing","Read the price from a global variable"],"correct":1,"reason":"Explicit parameters and a return value let tests call the calculation directly."},
+    {"question":"For def total(price, quantity), which are the parameters?","answers":["price and quantity","def and total","total and price","The numbers passed at the call site"],"correct":0,"reason":"Parameters are the named inputs in the function definition."},
+    {"question":"Which test checks a boundary case for a percentage discount?","answers":["Calling print twice","Using a different function name","Checking that a 0% discount returns the original price","Only testing a typical 15% discount"],"correct":2,"reason":"Zero is a useful boundary to verify the no-discount behavior."}
+  ]
+}

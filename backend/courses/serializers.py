@@ -19,48 +19,41 @@ class CourseSummarySerializer(serializers.ModelSerializer):
         return sum(len([l for l in m.lessons.all() if l.published]) for m in obj.modules.all() if m.published)
 
 
-def course_payload(course):
-    """Never reveal drafts, even when they belong to a published parent."""
+def course_payload(course, user=None):
+    from django.contrib.auth.models import AnonymousUser
+    from progression.services import course_progress, admin_access
+    user = user or AnonymousUser()
+    is_admin = admin_access(user)
+    states, accessible_lessons = course_progress(user, course.pk)
     phases, lessons, projects = [], [], []
     for module in course.modules.all():
-        if not module.published:
+        if not module.published and not is_admin:
             continue
-        visible_projects = [project for project in module.projects.all() if project.published]
-        phases.append({
-            "id": module.position, "name": module.name, "duration": module.duration_weeks,
-            "category": module.category, "desc": module.description, "icon": module.icon,
-            "topics": [topic.text for topic in module.topics.all()],
-            "project": visible_projects[0].name if visible_projects else "Project to be announced",
-        })
+        progress = states.get(module.pk, {})
+        final_project = progress.get('final_project')
+        if is_admin:
+            final = module.assignments.filter(module_pass_score__isnull=False).first()
+            if final and not final_project:
+                final_project = {'slug': final.slug, 'title': final.title,
+                                 'pass_score': final.module_pass_score, 'status': 'ready'}
+        phases.append({'id': module.position, 'name': module.name, 'duration': module.duration_weeks,
+            'category': module.category, 'desc': module.description, 'icon': module.icon,
+            'topics': [t.text for t in module.topics.all()], 'project': 'Module milestone',
+            'progress': {**progress, 'status': 'admin_preview' if is_admin else progress['status'],
+                         'project_unlocked': is_admin or progress.get('project_unlocked', False),
+                         'final_project': final_project}})
         for lesson in module.lessons.all():
-            if not lesson.published:
+            if not lesson.published and not is_admin:
                 continue
-            questions = list(lesson.quiz_questions.all())
-            lessons.append({
-                "id": lesson.public_id, "phaseId": module.position,
-                "title": lesson.title, "minutes": lesson.minutes, "difficulty": lesson.difficulty,
-                "objective": lesson.objective, "challenge": lesson.challenge,
-                "sections": [
-                    {"heading": section.heading, "body": section.body,
-                     "code": section.code, "language": section.language, "note": section.note}
-                    for section in lesson.sections.all()
-                ],
-                "quiz": [{
-                    "question": q.question,
-                    "answers": [q.option_a, q.option_b, q.option_c, q.option_d],
-                    "correct": q.correct, "reason": q.reason,
-                } for q in questions],
-                "passing_score": min(lesson.passing_score or (len(questions) * 3 + 3) // 4, len(questions)) if questions else 0,
-            })
-        for project in visible_projects:
-            projects.append({
-                "id": project.public_id, "name": project.name, "level": project.level,
-                "phase": module.position, "description": project.description,
-                "skills": [skill.strip() for skill in project.skills_csv.split(",") if skill.strip()],
-            })
-    return {
-        "slug": course.slug, "title": course.title, "subtitle": course.subtitle,
-        "description": course.description, "estimated_months": course.estimated_months,
-        "updated_at": course.updated_at.isoformat(),
-        "phases": phases, "lessons": lessons, "projects": projects,
-    }
+            lessons.append({'id': lesson.public_id, 'phaseId': module.position, 'title': lesson.title,
+                'minutes': lesson.minutes, 'difficulty': lesson.difficulty, 'locked': not (is_admin or lesson.pk in accessible_lessons)})
+        for project in module.projects.all():
+            if not project.published and not is_admin:
+                continue
+            unlocked = is_admin or progress['project_unlocked']
+            projects.append({'id': project.public_id, 'name': project.name, 'phase': module.position,
+                'level': project.level, 'locked': not unlocked,
+                **({'description': project.description, 'skills': [s.strip() for s in project.skills_csv.split(',') if s.strip()]} if unlocked else {})})
+    return {'slug': course.slug, 'title': course.title, 'subtitle': course.subtitle,
+        'description': course.description, 'estimated_months': course.estimated_months,
+        'updated_at': course.updated_at.isoformat(), 'phases': phases, 'lessons': lessons, 'projects': projects}

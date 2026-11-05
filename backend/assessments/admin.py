@@ -13,7 +13,7 @@ class AssignmentAdmin(admin.ModelAdmin):
     autocomplete_fields = ('module', 'project')
     readonly_fields = ('created_at',)
     fieldsets = [
-        ('Curriculum', {'fields': ('module', 'project', 'slug', 'title', 'brief', 'learning_outcomes', 'published')}),
+        ('Curriculum', {'fields': ('module', 'project', 'slug', 'title', 'brief', 'learning_outcomes', 'published', 'module_pass_score')}),
         ('Starter and assessment', {'fields': ('starter_bundle', 'template_url', 'test_command', 'duration_days', 'late_penalty_per_day')}),
         ('Code defence (5 questions)', {'fields': ('q1', 'q2', 'q3', 'q4', 'q5')}),
         ('Metadata', {'fields': ('created_at',)}),

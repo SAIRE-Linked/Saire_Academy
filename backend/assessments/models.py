@@ -28,10 +28,25 @@ class Assignment(models.Model):
     q4 = models.CharField(max_length=400)
     q5 = models.CharField(max_length=400)
     published = models.BooleanField(default=False)
+    module_pass_score = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text='Set a percentage to designate this as the final project for its module.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ('module__position', 'title')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['module'], condition=models.Q(module_pass_score__isnull=False),
+                name='one_final_assignment_per_module',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(module_pass_score__isnull=True) |
+                models.Q(module_pass_score__range=(1, 100)),
+                name='valid_module_pass_score',
+            ),
+        ]
 
     def __str__(self):
         return self.title

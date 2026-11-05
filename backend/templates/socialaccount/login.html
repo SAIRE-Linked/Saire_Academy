@@ -1,0 +1,18 @@
+{% extends "socialaccount/base_entrance.html" %}
+
+{% block head_title %}Continue with {{ provider.name }} · SAIRE-Linked Academy{% endblock %}
+
+{% block content %}
+  {% if process == "connect" %}
+    <h1>Connect {{ provider.name }}</h1>
+    <p>Continue to link this provider to your Academy account.</p>
+  {% else %}
+    <h1>Continue with {{ provider.name }}</h1>
+    <p>Sign in with your {{ provider.name }} account to open your Academy dashboard.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="entry-button">Continue with {{ provider.name }}</button>
+  </form>
+  <a class="entry-pilot" href="/">Choose a different sign-in method</a>
+{% endblock %}

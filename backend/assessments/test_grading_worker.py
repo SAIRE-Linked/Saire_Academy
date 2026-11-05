@@ -13,6 +13,21 @@ SECRET = 'a-secure-illustrative-token-with-more-than-32-characters'
 
 
 class GradingQueueTests(TestCase):
+
+    # v10: these regression tests exercise already-unlocked assignment workflows.
+    # Locked modules and learners are tested independently in progression/tests.py.
+    def grant_lesson_prerequisites(self):
+        from progression.models import LessonIteration
+        from courses.models import Lesson, Module
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+        from datetime import timedelta
+        for module in Module.objects.all():
+            lesson = Lesson.objects.create(module=module, title='Completed prerequisite', published=True)
+            for user in get_user_model().objects.all():
+                LessonIteration.objects.create(learner=user, lesson=lesson, started_at=timezone.now(),
+                    due_at=timezone.now()+timedelta(days=14), status='passed', raw_score=100, credited_score=100)
+
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
@@ -27,6 +42,9 @@ class GradingQueueTests(TestCase):
             module=module, slug='saire-quotation-engine', title='Quotation engine',
             brief='Original exercise', learning_outcomes='Decimals', published=True,
             q1='a', q2='b', q3='c', q4='d', q5='e')
+
+    def setUp(self):
+        self.grant_lesson_prerequisites()
 
     def learner(self):
         return {'HTTP_AUTHORIZATION': f'Token {self.token.key}'}

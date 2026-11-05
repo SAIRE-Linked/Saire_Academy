@@ -9,8 +9,10 @@ from .models import Course, Module, Lesson, Project
 from .serializers import CourseSummarySerializer, course_payload
 
 
-def catalogue_queryset():
-    return Course.objects.filter(status="published").prefetch_related(
+def catalogue_queryset(user=None):
+    from progression.services import admin_access
+    qs = Course.objects.all() if user is not None and admin_access(user) else Course.objects.filter(status="published")
+    return qs.prefetch_related(
         Prefetch("modules", queryset=Module.objects.prefetch_related("lessons")),
     )
 
@@ -23,7 +25,7 @@ def health(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def course_list(request):
-    return Response(CourseSummarySerializer(catalogue_queryset(), many=True).data)
+    return Response(CourseSummarySerializer(catalogue_queryset(request.user), many=True).data)
 
 
 @api_view(["GET"])
@@ -34,9 +36,11 @@ def course_detail(request, slug):
         Prefetch("lessons", queryset=Lesson.objects.order_by("position", "pk").prefetch_related("sections", "quiz_questions")),
         Prefetch("projects", queryset=Project.objects.order_by("position", "pk")),
     )
-    course = Course.objects.filter(status="published", slug=slug).prefetch_related(
+    from progression.services import admin_access
+    qs = Course.objects.all() if admin_access(request.user) else Course.objects.filter(status="published")
+    course = qs.filter(slug=slug).prefetch_related(
         Prefetch("modules", queryset=module_query)
     ).first()
     if not course:
         raise NotFound("Course not found")
-    return Response(course_payload(course))
+    return Response(course_payload(course, request.user))
