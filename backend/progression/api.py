@@ -14,6 +14,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.throttling import UserRateThrottle
 from courses.models import Lesson
 from .models import LessonIteration
+from .policy import SUPPLEMENTARY_DAYS, orientation_state
 from .services import begin, can_access, credit, expire, iteration_data, admin_access
 
 
@@ -45,6 +46,7 @@ def dashboard(request):
     passed = sum(i.status == 'passed' for i in rows)
     return Response({'username': request.user.get_username(), 'admin': admin_access(request.user),
         'server_now': timezone.now().isoformat(), 'passed': passed,
+        'orientation': orientation_state(request.user),
         'quote': ['Small steps, repeated with care, become engineering skill.',
                   'A failing test is a clue. Follow it.', 'Build one thing you can explain today.'][passed % 3],
         'badges': (['First proof'] if passed else []) + (['Building momentum'] if passed >= 3 else []),
@@ -56,6 +58,7 @@ def dashboard(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def detail(request, public_id):
+    from .academy_api import lesson_enrichment
     lesson = lesson_for(request.user, public_id)
     if not can_access(request.user, lesson):
         raise PermissionDenied('Lesson locked.')
@@ -64,6 +67,7 @@ def detail(request, public_id):
         raise PermissionDenied('Start the lesson to open its content and begin the 14-day iteration.')
     return Response({'id': lesson.public_id, 'title': lesson.title, 'objective': lesson.objective,
         'challenge': lesson.challenge, 'iteration': iteration_data(i),
+        **lesson_enrichment(lesson),
         'sections': list(lesson.sections.values('heading', 'body', 'code', 'language', 'note')),
         'quiz': [{'id': q.pk, 'question': q.question, 'answers': [q.option_a, q.option_b, q.option_c, q.option_d]} for q in lesson.quiz_questions.all()],
         'passing_count': lesson.passing_score or (lesson.quiz_questions.count() * 3 + 3) // 4})
@@ -95,7 +99,7 @@ def action(request, public_id, action):
             if i.status != 'failed':
                 raise PermissionDenied('A supplementary attempt is available only after the original deadline and before day 21.')
             i.supplementary_started_at = timezone.now()
-            i.supplementary_due_at = i.due_at + timedelta(days=7)
+            i.supplementary_due_at = i.due_at + timedelta(days=SUPPLEMENTARY_DAYS)
             i.status = 'supplementary'
             i.save()
         elif action == 'submit':

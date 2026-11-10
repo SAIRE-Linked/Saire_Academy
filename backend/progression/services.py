@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 from courses.models import Lesson, Module
 from .models import LessonIteration
+from .policy import LESSON_DAYS, SUPPLEMENTARY_DAYS, require_ready_to_start
 
 
 def admin_access(user):
@@ -17,9 +18,14 @@ def ordered_lessons(course_id):
                                  module__course__status='published', published=True).order_by('module__position', 'position', 'pk')
 
 
-def course_progress(user, course_id):
+def course_progress(user, course_id, _trail=frozenset()):
     """Return module state and accessible lessons from saved grades, in curriculum order."""
     from assessments.models import Assignment, Submission
+    from courses.models import ModulePrerequisite
+
+    if course_id in _trail:
+        return {}, set()  # Fail closed even if an import bypassed model validation.
+    trail = _trail | {course_id}
 
     modules = Module.objects.filter(course_id=course_id, published=True, course__status='published')
     lessons_by_module = defaultdict(list)
@@ -43,7 +49,18 @@ def course_progress(user, course_id):
     states = {}
     accessible_lessons = set()
     prerequisites_passed = user.is_authenticated
+    requirements = defaultdict(list)
+    dependency_progress = {}
+    for requirement in ModulePrerequisite.objects.filter(module__in=modules).select_related('required_module__course'):
+        required = requirement.required_module
+        if required.course_id not in dependency_progress:
+            dependency_progress[required.course_id] = course_progress(user, required.course_id, trail)[0]
+        requirements[requirement.module_id].append({
+            'module_id': required.pk, 'title': required.name, 'course_slug': required.course.slug,
+            'complete': dependency_progress[required.course_id].get(required.pk, {}).get('status') == 'completed',
+        })
     for module_id in modules.values_list('pk', flat=True):
+        prerequisites_passed = prerequisites_passed and all(r['complete'] for r in requirements[module_id])
         lessons = lessons_by_module[module_id]
         lessons_passed = bool(lessons) and all(pk in passed_lessons for pk in lessons)
         if prerequisites_passed:
@@ -83,6 +100,7 @@ def course_progress(user, course_id):
         else:
             status = 'lessons'
         states[module_id] = {
+            'requirements': requirements[module_id],
             'status': status, 'project_unlocked': project_unlocked, 'final_project': project,
             'lessons_passed': sum(pk in passed_lessons for pk in lessons), 'lesson_count': len(lessons),
         }
@@ -121,7 +139,7 @@ def expire(iteration, now=None):
         LessonIteration.objects.filter(pk=iteration.pk, status='active', due_at__lte=now).update(
             status='failed', primary_failed_at=iteration.due_at, raw_score=0, credited_score=0)
         iteration.refresh_from_db()
-    end = iteration.supplementary_due_at or (iteration.due_at + timedelta(days=7))
+    end = iteration.supplementary_due_at or (iteration.due_at + timedelta(days=SUPPLEMENTARY_DAYS))
     if iteration.status in ('failed', 'supplementary') and now >= end:
         LessonIteration.objects.filter(pk=iteration.pk, status__in=['failed', 'supplementary']).update(
             status='exhausted', raw_score=0, credited_score=0)
@@ -133,8 +151,12 @@ def begin(user, lesson, now=None):
     if not can_access(user, lesson):
         raise PermissionDenied('Pass earlier lessons and the final projects of earlier modules first.')
     now = now or timezone.now()
+    existing = LessonIteration.objects.filter(learner=user, lesson=lesson).first()
+    if existing:
+        return expire(existing, now), False
+    require_ready_to_start(user, lesson.module)
     iteration, created = LessonIteration.objects.get_or_create(learner=user, lesson=lesson, defaults={
-        'started_at': now, 'due_at': now + timedelta(days=14),
+        'started_at': now, 'due_at': now + timedelta(days=LESSON_DAYS),
         'grade_cap': settings.SAIRE_SUPPLEMENTARY_GRADE_CAP})
     return expire(iteration, now), created
 

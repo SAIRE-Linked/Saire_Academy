@@ -45,6 +45,7 @@ def public_data(a):
 def submission_data(s):
     review = getattr(s, 'review', None)
     job = getattr(s, 'grading_job', None)
+    defence = getattr(s, 'defence', None)
     return {
         'grading': ({'status': job.status, 'github_commit_verified': job.github_commit_verified,
                      'verified_test_score': job.verified_test_score,
@@ -54,6 +55,7 @@ def submission_data(s):
                     if job else None),
         'id': s.pk, 'commit_sha': s.commit_sha, 'repository_url': s.repository_url,
         'submitted_at': s.submitted_at.isoformat(), 'status': s.status,
+        'defence_status': 'submitted' if defence and defence.submitted_at else 'draft' if defence else 'unstarted',
         'late_days': s.late_days,
         'local_tests': {'passed': s.local_tests_passed, 'failed': s.local_tests_failed, 'errors': s.local_tests_errors,
                         'verified': False},
@@ -68,7 +70,7 @@ def submission_data(s):
 def attempt_data(attempt):
     return {'id': str(attempt.pk), 'assignment': attempt.assignment.slug,
             'started_at': attempt.started_at.isoformat(), 'due_at': attempt.due_at.isoformat(),
-            'submissions': [submission_data(s) for s in attempt.submissions.select_related('review').all()]}
+            'submissions': [submission_data(s) for s in attempt.submissions.select_related('review', 'grading_job', 'defence')]}
 
 
 @api_view(['POST'])
@@ -122,7 +124,10 @@ def start(request, slug):
     a = get_object_or_404(visible(request.user), slug=slug)
     from progression.services import require_module
     require_module(request.user, a.module)
+    from progression.policy import require_ready_to_start
     with transaction.atomic():
+        if not AssignmentAttempt.objects.filter(learner=request.user, assignment=a).exists():
+            require_ready_to_start(request.user, a.module)
         started = timezone.now()
         attempt, created = AssignmentAttempt.objects.get_or_create(
             learner=request.user, assignment=a,

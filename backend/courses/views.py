@@ -31,7 +31,7 @@ def course_list(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def course_detail(request, slug):
-    module_query = Module.objects.order_by("position", "pk").prefetch_related(
+    module_query = Module.objects.select_related("guide").order_by("position", "pk").prefetch_related(
         "topics",
         Prefetch("lessons", queryset=Lesson.objects.order_by("position", "pk").prefetch_related("sections", "quiz_questions")),
         Prefetch("projects", queryset=Project.objects.order_by("position", "pk")),

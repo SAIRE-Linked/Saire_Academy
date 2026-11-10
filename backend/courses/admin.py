@@ -1,8 +1,12 @@
 """Editor-friendly admin: courses -> modules -> topics, lessons and projects."""
+from . import academic_admin  # Register internal provenance and pathway editors.
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
-from .models import Course, Module, Topic, Lesson, LessonSection, QuizQuestion, Project
+from .models import (
+    Course, FormativeQuestion, GlossaryEntry, LearningResource, Lesson, LessonGuide,
+    LessonSection, Module, ModuleGuide, Project, QuizQuestion, SetupStep, Topic,
+)
 
 
 class ModuleInline(admin.TabularInline):
@@ -57,6 +61,17 @@ class QuizQuestionInline(admin.StackedInline):
     fields = ("position", "question", ("option_a", "option_b"), ("option_c", "option_d"), "correct", "reason")
 
 
+class LessonGuideInline(admin.StackedInline):
+    model = LessonGuide
+    extra = 0
+    max_num = 1
+
+
+class FormativeQuestionInline(admin.StackedInline):
+    model = FormativeQuestion
+    extra = 0
+
+
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
     list_display = ("title", "module", "position", "published", "minutes", "updated_at")
@@ -66,7 +81,7 @@ class LessonAdmin(admin.ModelAdmin):
     list_editable = ("position", "published")
     readonly_fields = ("public_id", "updated_at")
     autocomplete_fields = ("module",)
-    inlines = [SectionInline, QuizQuestionInline]
+    inlines = [LessonGuideInline, SectionInline, FormativeQuestionInline, QuizQuestionInline]
     fieldsets = (("Lesson", {"fields": ("module", "title", "position", "public_id")}),
                  ("Content", {"fields": ("objective", "challenge", "minutes", "difficulty")}),
                  ("Publishing & assessment", {"fields": ("published", "passing_score", "updated_at")}))
@@ -79,3 +94,31 @@ class ProjectAdmin(admin.ModelAdmin):
     list_editable = ("position", "published")
     search_fields = ("name",)
     autocomplete_fields = ("module",)
+
+
+class SetupStepInline(admin.StackedInline):
+    model = SetupStep
+    extra = 0
+
+
+@admin.register(ModuleGuide)
+class ModuleGuideAdmin(admin.ModelAdmin):
+    list_display = ('title', 'module', 'published', 'required_setup', 'revision')
+    list_filter = ('published', 'required_setup')
+    search_fields = ('title', 'module__name')
+    autocomplete_fields = ('module',)
+    inlines = [SetupStepInline]
+
+
+@admin.register(LearningResource)
+class LearningResourceAdmin(admin.ModelAdmin):
+    list_display = ('title', 'module', 'lesson', 'url')
+    search_fields = ('title', 'url')
+    autocomplete_fields = ('module', 'lesson')
+
+
+@admin.register(GlossaryEntry)
+class GlossaryAdmin(admin.ModelAdmin):
+    list_display = ('term', 'published')
+    search_fields = ('term', 'definition')
+    list_filter = ('published',)

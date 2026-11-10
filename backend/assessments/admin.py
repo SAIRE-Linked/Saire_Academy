@@ -1,8 +1,21 @@
 """ProofLoop instructor desk. Grades are entered by staff, never by learners."""
 from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html, format_html_join
 from .models import Assignment, AssignmentAttempt, Submission, CodeReview, GradingJob
 from django.utils import timezone
 from datetime import timedelta
+
+
+def submitted_defence(submission):
+    defence = getattr(submission, 'defence', None)
+    if defence is None or defence.submitted_at is None:
+        return 'No written defence has been handed in.'
+    return format_html_join(
+        '',
+        '<div><strong>{}</strong><p style="white-space: pre-wrap">{}</p></div>',
+        zip(defence.questions, defence.answers),
+    )
 
 
 @admin.register(Assignment)
@@ -38,7 +51,22 @@ class SubmissionAdmin(admin.ModelAdmin):
     list_filter = ('status', 'attempt__assignment')
     search_fields = ('commit_sha', 'attempt__learner__username')
     readonly_fields = ('attempt', 'repository_url', 'commit_sha', 'submitted_at', 'status',
-                       'local_tests_passed', 'local_tests_failed', 'local_tests_errors', 'late_days')
+                       'local_tests_passed', 'local_tests_failed', 'local_tests_errors', 'late_days',
+                       'defence_evidence', 'review_link')
+
+    @admin.display(description='Submitted code defence')
+    def defence_evidence(self, obj):
+        return submitted_defence(obj)
+
+    @admin.display(description='Instructor review')
+    def review_link(self, obj):
+        review = getattr(obj, 'review', None)
+        if review:
+            url = reverse('admin:assessments_codereview_change', args=[review.pk])
+            return format_html('<a href="{}">Open review</a>', url)
+        url = reverse('admin:assessments_codereview_add')
+        return format_html('<a href="{}?submission={}">Start review for this commit</a>', url, obj.pk)
+
     def short_sha(self, obj):
         return obj.commit_sha[:12]
     def has_add_permission(self, request):
@@ -53,13 +81,19 @@ class CodeReviewAdmin(admin.ModelAdmin):
     list_filter = ('reviewer',)
     search_fields = ('submission__attempt__learner__username', 'submission__commit_sha')
     autocomplete_fields = ('submission',)
-    readonly_fields = ('reviewer', 'final_score', 'reviewed_at')
+    readonly_fields = ('reviewer', 'final_score', 'reviewed_at', 'defence_evidence')
     fieldsets = [
         ('Submission', {'fields': ('submission', 'reviewer', 'reviewed_at')}),
         ('Instructor-verified results', {'fields': ('verified_test_score', 'code_quality_score')}),
-        ('Five code-defence answers (0–10 each)', {'fields': ('q1_score', 'q2_score', 'q3_score', 'q4_score', 'q5_score')}),
+        ('Five code-defence answers (0–10 each)', {'fields': ('defence_evidence', 'q1_score', 'q2_score', 'q3_score', 'q4_score', 'q5_score')}),
         ('Outcome', {'fields': ('feedback', 'final_score')}),
     ]
+    @admin.display(description='Submitted code defence')
+    def defence_evidence(self, obj):
+        if obj is None:
+            return 'Read the submitted answers on the submission record before entering marks.'
+        return submitted_defence(obj.submission)
+
     def get_readonly_fields(self, request, obj=None):
         base = list(super().get_readonly_fields(request, obj))
         if obj and getattr(getattr(obj.submission, 'grading_job', None), 'status', None) == GradingJob.COMPLETE:

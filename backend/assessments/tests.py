@@ -41,6 +41,9 @@ class ProofLoopApiTests(TestCase):
 
     def setUp(self):
         self.grant_lesson_prerequisites()
+        from django.conf import settings
+        from progression.models import OrientationAcknowledgment
+        OrientationAcknowledgment.objects.create(learner=self.user, version=settings.SAIRE_ORIENTATION_VERSION)
 
     def auth(self, token=None):
         return {'HTTP_AUTHORIZATION': f'Token {(token or self.token).key}'}

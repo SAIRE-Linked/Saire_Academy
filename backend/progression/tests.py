@@ -1,11 +1,12 @@
 from datetime import timedelta, datetime, timezone as dt_timezone
 from unittest.mock import patch
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
 from django.utils import timezone
 from courses.models import Course, Module, Lesson, LessonSection, QuizQuestion, Project
 from assessments.models import Assignment, AssignmentAttempt, CodeReview, Submission
-from .models import LessonIteration
+from .models import LessonIteration, OrientationAcknowledgment
 from .services import begin, expire, credit
 
 
@@ -30,6 +31,7 @@ class ProgressionTests(TestCase):
         from django.core.cache import cache
         cache.clear()
         self.client.force_login(self.user)
+        OrientationAcknowledgment.objects.create(learner=self.user, version=settings.SAIRE_ORIENTATION_VERSION)
 
     def post(self, action, body=None, lesson='one'):
         return self.client.post(f'/api/v1/lessons/{lesson}/{action}/', body or {}, content_type='application/json')
@@ -228,6 +230,13 @@ class ProgressionTests(TestCase):
     def test_original_foundation_lessons_open_and_complete_in_order(self):
         from django.core.management import call_command
         call_command('seed_curriculum', verbosity=0)
+        module_id = Lesson.objects.get(public_id='p1-l1').module_id
+        path = f'/api/v1/academy/modules/{module_id}/setup/'
+        setup = self.client.get(path).json()
+        completed = self.client.post(path, {
+            'revision': setup['revision'], 'checked': [step['id'] for step in setup['steps']],
+        }, content_type='application/json')
+        self.assertTrue(completed.json()['completed'])
         for number in range(1, 5):
             lesson_id = f'p1-l{number}'
             lesson = Lesson.objects.get(public_id=lesson_id)

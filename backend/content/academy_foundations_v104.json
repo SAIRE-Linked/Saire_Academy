@@ -1,0 +1,355 @@
+{
+  "outcomes": [
+    [
+      "Run and explain a short Python program.",
+      "Use values, decisions, loops and functions to solve a small problem.",
+      "Test a quotation calculation and explain the evidence in a code defence."
+    ],
+    [
+      "Break a problem into steps and compare two solutions.",
+      "Choose a collection for searching or grouping records."
+    ],
+    [
+      "Use version history to explain a change.",
+      "Write readable code and tests that another developer can run."
+    ],
+    [
+      "Trace a request through an API and database.",
+      "Explain what a deployed service needs to run."
+    ],
+    [
+      "Summarise a dataset and explain what the results show.",
+      "Check assumptions before interpreting results."
+    ],
+    [
+      "Separate training and evaluation data.",
+      "Compare a model against a simple baseline."
+    ],
+    [
+      "Explain what a neural model learns from examples.",
+      "Inspect errors in a small text prediction task."
+    ],
+    [
+      "Design prompts with clear inputs and expected outputs.",
+      "Check whether generated answers are grounded in a source."
+    ],
+    [
+      "Give an agent a bounded task and identify when people should intervene.",
+      "Check a tool result before acting on it."
+    ],
+    [
+      "Connect a model, interface and data source in an application.",
+      "Test a user workflow from input to result."
+    ],
+    [
+      "Identify risks in an AI feature.",
+      "Decide what to measure and monitor."
+    ],
+    [
+      "Define a user problem and a measurable outcome.",
+      "Use evidence to explain how a project meets its goal."
+    ]
+  ],
+  "python_intro": "Python is a language for writing instructions a computer can follow. A Python interpreter reads and runs those instructions. A file ending in .py saves them so you can run them again. People use Python to automate tasks, build web services, study data and work with AI. In this lab, Python runs the code, VS Code edits it, the terminal sends commands, and Git records changes.",
+  "steps": [
+    [
+      "Install Python on Windows",
+      "Open the official Python Windows page. Install the Python install manager or a supported Python 3 installer that matches your computer. If a traditional installer offers Add Python to PATH, select it. Open a new PowerShell window. Try python --version. If it opens the Store or fails, try py --version. Use the working command throughout the lab. See the Windows guide if neither works.",
+      "python --version\npy --version",
+      "At least one command reports Python 3 and a version number."
+    ],
+    [
+      "Set up VS Code and its Python extension",
+      "Run the official VS Code Windows installer. Open Extensions with Ctrl+Shift+X and install Python published by Microsoft. Press Ctrl+Shift+P, search for Python: Select Interpreter, and choose the Python 3 installation you checked.",
+      "",
+      "VS Code shows the Microsoft Python extension and the correct Python 3 interpreter."
+    ],
+    [
+      "Install Git",
+      "Use the official Git for Windows installer, then reopen the terminal. Git records changes so you can identify the exact version you submit later.",
+      "git --version",
+      "I can see a Git version in the terminal."
+    ],
+    [
+      "Find your way around the terminal",
+      "In VS Code choose Terminal, then New Terminal. Get-Location shows your current folder; Get-ChildItem lists its files; cd changes the folder. Run each line separately from a folder you can write to. If the practice folder already exists, skip mkdir.",
+      "mkdir saire-python-practice\ncd saire-python-practice\nGet-Location\nGet-ChildItem",
+      "The current location ends in saire-python-practice."
+    ],
+    [
+      "Write and run your first program",
+      "Open the practice folder in VS Code. Create hello.py, type the first line below into the file, and save it. Type the second line in the terminal, or use py hello.py if py is your working command. Expect Hello, Academy! Then change the message, save, and run it again.",
+      "print(\"Hello, Academy!\")\npython hello.py",
+      "I ran hello.py, saw the greeting, and ran it again after changing the text."
+    ],
+    [
+      "Verify the environment",
+      "Ask Python to show the interpreter path and compare it with VS Code. If the file is missing, check the terminal folder and make sure the name is not hello.py.txt. If you cannot install tools or need an accessible alternative, contact your instructor before starting a timed lesson. You can read and plan here without starting a timer.",
+      "python -c \"import sys; print(sys.executable)\"\nGet-ChildItem hello.py",
+      "I can find my interpreter and hello.py, or I have an agreed alternative."
+    ]
+  ],
+  "module_resources": [
+    [
+      "Python for Windows",
+      "https://www.python.org/downloads/windows/",
+      "Download a supported Python installation."
+    ],
+    [
+      "Python on Windows guide",
+      "https://docs.python.org/3/using/windows.html",
+      "Find official installation and troubleshooting guidance."
+    ],
+    [
+      "Download VS Code",
+      "https://code.visualstudio.com/download",
+      "Choose your editor installer."
+    ],
+    [
+      "Microsoft Python extension",
+      "https://marketplace.visualstudio.com/items?itemName=ms-python.python",
+      "Confirm the extension and publisher."
+    ],
+    [
+      "Python in VS Code",
+      "https://code.visualstudio.com/docs/python/python-tutorial",
+      "See how the editor, interpreter and terminal work together."
+    ],
+    [
+      "Install Git for Windows",
+      "https://git-scm.com/install/windows",
+      "Choose the installer for your PC."
+    ],
+    [
+      "Pro Git introduction",
+      "https://git-scm.com/book/en/v2/Getting-Started-What-is-Git%3F",
+      "Read why projects use version history."
+    ],
+    [
+      "Python virtual environments",
+      "https://docs.python.org/3/library/venv.html",
+      "Optional reading for projects that need their own packages."
+    ]
+  ],
+  "glossary": [
+    [
+      "Program",
+      "Saved instructions a computer can run.",
+      "hello.py tells Python to display a greeting."
+    ],
+    [
+      "Interpreter",
+      "The tool that reads and runs instructions in a language.",
+      "Python runs the steps in hello.py."
+    ],
+    [
+      "Terminal",
+      "A text window where you type commands and see their results.",
+      "Run git --version to see which Git you installed."
+    ],
+    [
+      "Command",
+      "An instruction you type for a program to run.",
+      "Get-Location asks PowerShell to show the current folder."
+    ],
+    [
+      "Variable",
+      "A name your program uses to refer to a value.",
+      "quantity = 3 gives the value 3 the name quantity."
+    ],
+    [
+      "String",
+      "A value made of text.",
+      "\"3\" is text. 3 is an integer."
+    ],
+    [
+      "Condition",
+      "A question with a true or false result that a program can act on.",
+      "quantity > 0 checks that the quantity is positive."
+    ],
+    [
+      "Loop",
+      "A way to repeat a step for several items or while a condition holds.",
+      "Print each item on a shopping list."
+    ],
+    [
+      "Function",
+      "A set of steps you can call when needed.",
+      "A total function can multiply price by quantity."
+    ],
+    [
+      "Test",
+      "A repeatable check against an expected result.",
+      "Two items costing 5 each should total 10."
+    ],
+    [
+      "Commit",
+      "A saved point in Git history that identifies one version of a project.",
+      "ProofLoop records the commit submitted for review."
+    ],
+    [
+      "Iteration",
+      "The time window for a graded lesson.",
+      "It starts when you choose Start 14-day lesson."
+    ],
+    [
+      "Formative check",
+      "A practice check that helps you decide what to review.",
+      "Compare your before and after checks for a lesson."
+    ]
+  ],
+  "lessons": [
+    {
+      "id": "p1-l1",
+      "guide": [
+        "A program is a sequence of instructions. Think of a recipe: ingredients are inputs, the steps do the work, and the finished dish is output.",
+        "Start with a price and a quantity. Multiplication does the work. print displays the answer.",
+        "price = 6\nquantity = 4\nprint(price * quantity)",
+        "Predict the result, then run the example. Change quantity to 2 and explain why the result changed.",
+        "Calculate the cost of two pencils priced at 3 each and a notebook priced at 8. Verify the total by hand.",
+        "A variable gives a value a name. Python looks up that value when the instruction runs."
+      ],
+      "resource": [
+        "Python introduction",
+        "https://docs.python.org/3/tutorial/introduction.html",
+        "Optional examples of numbers and text."
+      ],
+      "checks": [
+        [
+          "What does print(3 * 4) show?",
+          [
+            "7",
+            "12",
+            "34"
+          ],
+          1,
+          "Python multiplies 3 by 4 and displays 12."
+        ],
+        [
+          "What is the result displayed by a calculator called?",
+          [
+            "Input",
+            "An editor",
+            "Output"
+          ],
+          2,
+          "Output is what the program produces."
+        ]
+      ]
+    },
+    {
+      "id": "p1-l2",
+      "guide": [
+        "A value has a type that affects what Python can do with it. A price on a sign is text; the price in a calculation needs to be a number.",
+        "Quotes make \"4\" text. Convert it to an integer before adding 2.",
+        "quantity_text = \"4\"\nquantity = int(quantity_text)\nprint(quantity + 2)",
+        "Compare print(\"4\" + \"2\") with print(4 + 2). Write what each line does.",
+        "Ask for the number of books, convert the input to an integer, and show how many books there will be after adding three.",
+        "Try int(\"four\") separately. Read the last line of the error to find what Python could not convert."
+      ],
+      "resource": [
+        "Python errors and exceptions",
+        "https://docs.python.org/3/tutorial/errors.html",
+        "Optional help reading the last line of an error."
+      ],
+      "checks": [
+        [
+          "What type is \"5\"?",
+          [
+            "String",
+            "Integer",
+            "Boolean"
+          ],
+          0,
+          "Quotes make the value text."
+        ],
+        [
+          "Which converts \"5\" to a number?",
+          [
+            "print(\"5\")",
+            "int(\"5\")",
+            "\"5\" + \"0\""
+          ],
+          1,
+          "int converts valid integer text to a number."
+        ]
+      ]
+    },
+    {
+      "id": "p1-l3",
+      "guide": [
+        "A decision chooses which step runs. A loop repeats a step. A shop might check whether each item has a positive price before using it.",
+        "Visit each price in order. The indented print runs only if the price is greater than zero.",
+        "prices = [4, 0, 7]\nfor price in prices:\n    if price > 0:\n        print(price)",
+        "Predict which prices appear. Add -2 and 9, then explain which numbers were skipped.",
+        "Loop through a list of temperatures and display each one below zero. Test zero, a positive number and two negatives.",
+        "Indentation groups steps. Moving a line may change what repeats or depends on a condition."
+      ],
+      "resource": [
+        "Python control flow",
+        "https://docs.python.org/3/tutorial/controlflow.html",
+        "More examples of decisions and loops."
+      ],
+      "checks": [
+        [
+          "How many times does a for loop visit a three-item list?",
+          [
+            "Once",
+            "Three times",
+            "Until stopped"
+          ],
+          1,
+          "A for loop visits one item at a time."
+        ],
+        [
+          "Is 0 greater than 0?",
+          [
+            "Yes",
+            "Only in a loop",
+            "No"
+          ],
+          2,
+          "Greater than excludes an equal value."
+        ]
+      ]
+    },
+    {
+      "id": "p1-l4",
+      "guide": [
+        "A function groups steps so you can use them again with different inputs, like using the same measuring cup for different ingredients.",
+        "The total function takes a price and quantity. It returns a value the caller can use or test.",
+        "def total(price, quantity):\n    return price * quantity\n\nprint(total(5, 3))\nassert total(5, 0) == 0",
+        "Predict the printed result. Change the price and run again. Change the expected value in the assert once to see a failed check, then fix it.",
+        "Write delivery_cost to return the total for parcels costing 12 each. Add checks for zero, one and three parcels.",
+        "print displays a value. return passes it back to the caller, so a test can check it directly."
+      ],
+      "resource": [
+        "Defining functions in Python",
+        "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
+        "Optional details about parameters and return values."
+      ],
+      "checks": [
+        [
+          "Which keyword sends a value back to the caller?",
+          [
+            "for",
+            "return",
+            "if"
+          ],
+          1,
+          "return gives the caller a value."
+        ],
+        [
+          "Which test checks a boundary for a delivery charge?",
+          [
+            "Check zero parcels",
+            "Rename the file",
+            "Print the label twice"
+          ],
+          0,
+          "Zero checks the boundary where there is nothing to charge for."
+        ]
+      ]
+    }
+  ]
+}

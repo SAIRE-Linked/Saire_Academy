@@ -100,6 +100,20 @@ class Submission(models.Model):
         return f'{self.attempt} @ {self.commit_sha[:12]}'
 
 
+class CodeDefence(models.Model):
+    """Learner explanations for the exact commit already submitted to ProofLoop."""
+
+    submission = models.OneToOneField(Submission, related_name='defence', on_delete=models.PROTECT)
+    questions = models.JSONField()
+    answers = models.JSONField()
+    revision = models.PositiveIntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f'Code defence for {self.submission}'
+
+
 class CodeReview(models.Model):
     submission = models.OneToOneField(Submission, related_name='review', on_delete=models.PROTECT)
     reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='completed_reviews')

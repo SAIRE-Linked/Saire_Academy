@@ -22,9 +22,13 @@ class CourseSummarySerializer(serializers.ModelSerializer):
 def course_payload(course, user=None):
     from django.contrib.auth.models import AnonymousUser
     from progression.services import course_progress, admin_access
+    from progression.models import SetupCompletion
     user = user or AnonymousUser()
     is_admin = admin_access(user)
     states, accessible_lessons = course_progress(user, course.pk)
+    completions = set(SetupCompletion.objects.filter(
+        learner=user, guide__module__course=course,
+    ).values_list('guide_id', 'revision')) if user.is_authenticated else set()
     phases, lessons, projects = [], [], []
     for module in course.modules.all():
         if not module.published and not is_admin:
@@ -36,7 +40,11 @@ def course_payload(course, user=None):
             if final and not final_project:
                 final_project = {'slug': final.slug, 'title': final.title,
                                  'pass_score': final.module_pass_score, 'status': 'ready'}
-        phases.append({'id': module.position, 'name': module.name, 'duration': module.duration_weeks,
+        guide = getattr(module, 'guide', None)
+        required = bool(guide and guide.published and guide.required_setup)
+        phases.append({'setup_required': required,
+            'setup_complete': not required or (guide.pk, guide.revision) in completions,
+            'id': module.position, 'module_id': module.pk, 'name': module.name, 'duration': module.duration_weeks,
             'category': module.category, 'desc': module.description, 'icon': module.icon,
             'topics': [t.text for t in module.topics.all()], 'project': 'Module milestone',
             'progress': {**progress, 'status': 'admin_preview' if is_admin else progress['status'],
@@ -54,6 +62,8 @@ def course_payload(course, user=None):
             projects.append({'id': project.public_id, 'name': project.name, 'phase': module.position,
                 'level': project.level, 'locked': not unlocked,
                 **({'description': project.description, 'skills': [s.strip() for s in project.skills_csv.split(',') if s.strip()]} if unlocked else {})})
-    return {'slug': course.slug, 'title': course.title, 'subtitle': course.subtitle,
+    from .classroom import classroom_entry
+    entry = classroom_entry(course, user, states, accessible_lessons, bool(lessons))
+    return {'classroom_entry': entry, 'slug': course.slug, 'title': course.title, 'subtitle': course.subtitle,
         'description': course.description, 'estimated_months': course.estimated_months,
         'updated_at': course.updated_at.isoformat(), 'phases': phases, 'lessons': lessons, 'projects': projects}

@@ -1,5 +1,7 @@
 """Load the existing SAIRE-Linked curriculum into Django, without overwriting edits."""
 import json
+from django.apps import apps
+from courses.foundations_v104 import add_foundation_guides
 from pathlib import Path
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -69,6 +71,7 @@ class Command(BaseCommand):
                     name=item["name"], description=item["description"],
                     level=item["level"], skills_csv=", ".join(item["skills"]),
                 )
+            add_foundation_guides(apps, course._state.db)
         self.stdout.write(self.style.SUCCESS(
             f"Seeded {course.title}: {len(modules)} phases, {len(data['lessons'])} lessons, {len(data['projects'])} projects"
         ))

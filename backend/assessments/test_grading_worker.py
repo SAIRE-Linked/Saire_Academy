@@ -45,6 +45,9 @@ class GradingQueueTests(TestCase):
 
     def setUp(self):
         self.grant_lesson_prerequisites()
+        from django.conf import settings
+        from progression.models import OrientationAcknowledgment
+        OrientationAcknowledgment.objects.create(learner=self.student, version=settings.SAIRE_ORIENTATION_VERSION)
 
     def learner(self):
         return {'HTTP_AUTHORIZATION': f'Token {self.token.key}'}

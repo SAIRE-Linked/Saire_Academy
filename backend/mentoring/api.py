@@ -12,14 +12,17 @@ from .models import MentorMessage
 from .provider import MentorProviderError, build_learning_context, configured_provider, make_socratic_reply, twin_context_enabled
 
 
+from progression.policy import MENTOR_DAILY_RATE, MENTOR_HOURLY_RATE
+
+
 class MentorBurstThrottle(UserRateThrottle):
     scope = 'mentor_burst'
-    rate = '8/hour'
+    rate = MENTOR_HOURLY_RATE
 
 
 class MentorDailyThrottle(UserRateThrottle):
     scope = 'mentor_daily'
-    rate = '40/day'
+    rate = MENTOR_DAILY_RATE
 
 
 def serialize(message):

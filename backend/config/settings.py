@@ -117,3 +117,9 @@ CSRF_TRUSTED_ORIGINS += ['http://localhost:3000', 'http://127.0.0.1:3000'] if DE
 
 # Enable only when the backend is reachable exclusively through a trusted proxy.
 USE_X_FORWARDED_HOST = os.getenv("DJANGO_USE_X_FORWARDED_HOST", "0") == "1"
+
+
+SAIRE_ORIENTATION_VERSION = os.getenv('SAIRE_ORIENTATION_VERSION', '2026-11-v1').strip()
+if not 1 <= len(SAIRE_ORIENTATION_VERSION) <= 60:
+    raise RuntimeError('SAIRE_ORIENTATION_VERSION must contain 1 to 60 characters')
+SAIRE_SUPPORT_EMAIL = os.getenv('SAIRE_SUPPORT_EMAIL', '').strip()
