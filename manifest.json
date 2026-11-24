@@ -1,0 +1,25 @@
+{
+  "release": "10.6.2",
+  "changes": [
+    {
+      "path": "backend/progression/test_account_connections.py",
+      "before": null,
+      "after": "b49ec859d9b83e0703dfb72e90bbc67a18326a48033b83c398bd72315d827032"
+    },
+    {
+      "path": "backend/templates/socialaccount/connections.html",
+      "before": null,
+      "after": "c583fb0537f7056bd04016c5b4c52059d7dc08f059fd5543081fed0f0b44ad54"
+    },
+    {
+      "path": "backend/templates/socialaccount/signup.html",
+      "before": null,
+      "after": "213522e1c06292a4834cb566fc99a170485b1a5be705f0f8a20dcd3a94e3e234"
+    },
+    {
+      "path": "docs/EXISTING_ACCOUNT_GOOGLE_CONNECTION.md",
+      "before": null,
+      "after": "af96ea6f9709307c35b66e129aa9da9fa1c7ca9bb8d9c31908f3dd43c01c4905"
+    }
+  ]
+}

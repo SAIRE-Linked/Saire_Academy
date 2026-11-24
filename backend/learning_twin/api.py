@@ -61,10 +61,20 @@ def build_profile(learner):
                 'reviewed_at': review.reviewed_at.isoformat(),
             })
 
+    # Reuse the same progression decisions as the assignment lab, once per course.
+    from progression.services import admin_access, course_progress
+    unlocked = {}
+    admin = admin_access(learner)
+    for mapping in mappings:
+        course_id = mapping.assignment.module.course_id
+        if not admin and course_id not in unlocked:
+            states, _ = course_progress(learner, course_id)
+            unlocked[course_id] = {pk for pk, state in states.items() if state.get('project_unlocked')}
     results = []
     for skill in skills:
         mapped = [m for m in mappings if m.skill_id == skill.pk and m.assignment.published and m.assignment.module.published
-                  and m.assignment.module.course.status == 'published']
+                  and m.assignment.module.course.status == 'published'
+                  and (admin or m.assignment.module_id in unlocked[m.assignment.module.course_id])]
         possible_assignment = mapped[0].assignment.title if mapped else None
         evidence = evidence_by_skill[skill.pk]
         summary = summarise_skill(evidence, possible_assignment)

@@ -1,0 +1,85 @@
+body:has(.academy-entry) {
+  margin: 0;
+  color: #effaf5;
+  background: #081613;
+  font: 16px/1.6 system-ui, sans-serif;
+}
+.academy-entry, .academy-entry * { box-sizing: border-box; }
+.academy-entry {
+  width: min(100% - 36px, 1160px);
+  min-height: 100vh;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 24px 0;
+  border-bottom: 1px solid #24413a;
+}
+.academy-entry a { color: #a4f3ce; }
+.entry-brand { display: flex; align-items: center; gap: 12px; font-weight: 750; text-decoration: none; }
+.entry-brand img { width: 42px; height: 42px; object-fit: contain; }
+.entry-hero {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  align-items: center;
+  gap: clamp(32px, 7vw, 100px);
+  padding: clamp(48px, 9vw, 120px) 0;
+}
+.academy-entry h1, .academy-entry h2 { margin: 0 0 18px; line-height: 1.12; }
+.entry-intro h1 { font-size: clamp(2.4rem, 5vw, 4.5rem); letter-spacing: -.055em; }
+.academy-entry p, .academy-entry dd, .academy-entry footer { color: #b5cec3; }
+.academy-entry .entry-eyebrow { color: #83edb6; font-weight: 750; font-size: .75rem; letter-spacing: .14em; }
+.entry-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 28px 0 0; }
+.entry-steps dt { font-weight: 750; color: #b7f5d5; }
+.entry-steps dd { margin: 4px 0 0; font-size: .9rem; }
+.entry-card {
+  background: #102820;
+  border: 1px solid #34594b;
+  border-radius: 22px;
+  padding: clamp(22px, 4vw, 40px);
+}
+.entry-provider-list { display: grid; gap: 12px; margin-top: 22px; }
+.entry-button, .entry-card button[type=submit] {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid #75d9a7;
+  border-radius: 10px;
+  background: #1c4033;
+  color: #eafff3;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+.entry-button:disabled { opacity: .5; cursor: default; }
+.entry-google { font-weight: 800; font-size: 1.2rem; }
+.entry-pilot { display: inline-block; margin-top: 10px; font-size: .9rem; }
+.entry-auth .entry-card { width: min(100%, 460px); align-self: center; margin: auto 0; }
+.entry-auth .entry-header { margin-bottom: 32px; }
+.entry-auth .entry-card input:not([type=checkbox]):not([type=hidden]) {
+  width: 100%;
+  border: 1px solid #527768;
+  border-radius: 8px;
+  background: #081613;
+  padding: 10px;
+  color: #effaf5;
+  font: inherit;
+}
+.academy-entry footer { padding: 24px 0; font-size: .85rem; }
+.academy-entry :focus-visible { outline: 3px solid #92edbb; outline-offset: 4px; }
+@media (max-width: 740px) {
+  .entry-hero { grid-template-columns: 1fr; }
+  .entry-steps { grid-template-columns: 1fr; gap: 10px; }
+}

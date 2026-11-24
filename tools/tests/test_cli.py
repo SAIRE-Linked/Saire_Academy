@@ -2,7 +2,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
-from zipfile import ZipFile
+from zipfile import ZipFile, ZipInfo
 from saire_cli.cli import safe_extract, normalize_origin, api_base, CLIError
 
 
@@ -10,7 +10,9 @@ class CLISafetyTests(unittest.TestCase):
     def zip_bytes(self, entries):
         b=io.BytesIO()
         with ZipFile(b,'w') as zipfile:
-            for name,value in entries.items(): zipfile.writestr(name,value)
+            for name,value in entries.items():
+                info=ZipInfo();info.filename=name
+                zipfile.writestr(info,value)
         return b.getvalue()
 
     def test_safe_starter_extract(self):
@@ -19,7 +21,7 @@ class CLISafetyTests(unittest.TestCase):
             self.assertEqual((Path(root)/'starter/src/app.py').read_text(),'print(123)')
 
     def test_block_zip_traversal(self):
-        for name in ['../escape.py','/absolute.py','src\\evil.py']:
+        for name in ['../escape.py','/absolute.py','src\\evil.py','C:/escape.py','file:stream']:
             with tempfile.TemporaryDirectory() as root:
                 with self.assertRaises(CLIError):
                     safe_extract(self.zip_bytes({name:'malware'}),Path(root)/'starter')

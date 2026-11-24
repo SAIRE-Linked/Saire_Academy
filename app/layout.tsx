@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./workspace.css";
 export const metadata: Metadata = {
   title: "SAIRE-Linked Digital Learning | AI Engineering Mastery",
   description: "Build smarter. Learn deeper. A project-based path from programming foundations to advanced AI and agent engineering by SAIRE-Linked.",

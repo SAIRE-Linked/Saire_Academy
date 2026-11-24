@@ -1,0 +1,27 @@
+{% extends "socialaccount/base_entrance.html" %}
+
+{% block head_title %}Finish sign-in · SAIRE-Linked Academy{% endblock %}
+
+{% block content %}
+  <h1>Finish your Academy sign-in</h1>
+  <p>{{ account.get_provider.name }} has returned you to the Academy. Choose the option that matches your account.</p>
+
+  <section aria-labelledby="existing-account-title">
+    <h2 id="existing-account-title">Already have an Academy account?</h2>
+    <p>Sign in with your existing Academy password or a provider you previously connected. Then connect {{ account.get_provider.name }} to that same account. Your lessons and progress stay with it.</p>
+    {% url 'socialaccount_connections' as connections_url %}
+    <a class="entry-button" href="{% url 'account_login' %}?next={{ connections_url|urlencode }}">Sign in to my existing account</a>
+    <a class="entry-pilot" href="{% url 'account_reset_password' %}">Forgot your Academy password?</a>
+  </section>
+
+  <section aria-labelledby="new-account-title">
+    <h2 id="new-account-title">New to the Academy?</h2>
+    <p>Complete this form only if you do not already have an Academy account. An email already in use must be connected through the option above.</p>
+    <form method="post" action="{% url 'socialaccount_signup' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
+      {{ redirect_field }}
+      <button type="submit">Create my Academy account</button>
+    </form>
+  </section>
+{% endblock %}

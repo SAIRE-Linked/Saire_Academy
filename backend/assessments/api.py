@@ -106,7 +106,7 @@ def me(request):
 @permission_classes([AllowAny])
 def assignments(request):
     from progression.services import module_access
-    return Response([public_data(a) if module_access(request.user, a.module) else {'slug': a.slug, 'title': a.title, 'locked': True, 'module': a.module.name, 'phase': a.module.position} for a in visible(request.user)])
+    return Response([public_data(a) if module_access(request.user, a.module) else {'slug': a.slug, 'title': a.title, 'locked': True, 'module': a.module.name, 'phase': a.module.position, 'duration_days': a.duration_days} for a in visible(request.user)])
 
 
 @api_view(['GET'])

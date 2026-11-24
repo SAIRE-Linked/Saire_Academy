@@ -1,0 +1,8 @@
+{
+  "slug": "saire-service-intake",
+  "version": "1.0",
+  "duration_days_suggestion": 14,
+  "learner_visible_test_command": "python -m unittest discover -s tests -v",
+  "assessment_mode": "code-plus-human-review",
+  "requires_private_grading_worker": true
+}

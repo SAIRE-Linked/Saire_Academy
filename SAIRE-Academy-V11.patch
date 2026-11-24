@@ -1,0 +1,908 @@
+diff --git a/app/assignments/page.tsx b/app/assignments/page.tsx
+index d28f4d8224c91ad126d5980cbfeef6bab12e6653..8640cc9956bd1fa08f19e30fb92731d0ab5f400a 100644
+--- a/app/assignments/page.tsx
++++ b/app/assignments/page.tsx
+@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
+ import { motion } from "framer-motion";
+ import { ArrowLeft, ArrowRight, BookOpen, BrainCircuit, CalendarClock, CheckCircle2, Code2, Download, Github, Lightbulb, LockKeyhole, LogIn, LogOut, ShieldCheck, Terminal, Trophy } from "lucide-react";
+ import { LMS_API_URL } from "@/lib/lms-api";
++import AcademyNavigation from "@/components/AcademyNavigation";
++import { count } from "@/lib/academy-display";
+ import AccountControls from '@/components/AccountControls';
+ import { endBrowserSession, watchSessionEnd, SIGN_IN_URL } from '@/lib/browser-session';
+ import CodeDefenceRoom from "@/components/CodeDefenceRoom";
+@@ -14,7 +16,7 @@ import "./learning-twin.css";
+ type Assignment = {
+   locked?:boolean;
+   slug:string;title:string;brief:string;course_slug:string;phase:number;module:string;
+-  duration_days:number;has_starter:boolean;test_command:string;learning_outcomes:string[];
++  duration_days?:number;has_starter:boolean;test_command:string;learning_outcomes:string[];
+   review_questions:string[];grading:Record<string,number>;template_url:string;
+ };
+ type Review = {final_score:string;feedback:string;question_scores:number[];verified_test_score:number};
+@@ -100,16 +102,16 @@ export default function ProofLoopPage(){
+   },[]);
+   useEffect(()=>{
+     let live=true;
+-    request<Assignment[]>("/assignments/",undefined,"").then(items=>{if(live){setList(items);setChosen(current => {
++    request<Assignment[]>("/assignments/",undefined,token).then(items=>{if(live){setList(items);setChosen(current => {
+         const requested = new URLSearchParams(window.location.search).get("assignment");
+         const unlocked = items.filter(assignment => !assignment.locked);
+-        return unlocked.find(assignment => assignment.slug === requested)?.slug
+-          ?? unlocked.find(assignment => assignment.slug === current)?.slug
++        if (requested) return requested;
++        return unlocked.find(assignment => assignment.slug === current)?.slug
+           ?? unlocked[0]?.slug ?? "";
+       });}})
+       .catch(()=>{if(live)setError("Django API is offline. Start the backend to view live assignments.");});
+     return()=>{live=false;};
+-  },[request]);
++  },[request,token]);
+   const selected=list.find(a=>a.slug===chosen && !a.locked);
+ 
+   const refresh=useCallback(async(slug:string,auth=token)=>{
+@@ -240,8 +242,9 @@ export default function ProofLoopPage(){
+   }
+ 
+   return <main className="proofloop-page">
+-    <p><a href="/dashboard/">Personal dashboard</a> · <a href="/">Sign in with Google or GitHub</a></p>
+-    <div className="proofloop-back"><a href="/"><ArrowLeft size={16}/> Back to Academy</a><span>SAIRE-LINKED / PROOFLOOP v10.3</span></div>
++    <AcademyNavigation compact active="/assignments/" />
++    {!token && <p><a href="/dashboard/">Personal dashboard</a> · <a href="/">Sign in with Google or GitHub</a></p>}
++    <div className="proofloop-back"><a href="/"><ArrowLeft size={16}/> Back to Academy</a><span>SAIRE-LINKED / PROOFLOOP</span></div>
+     <AccountControls username={token ? learner : null} onLogout={logout} />
+     <p className="project-local-rule">End-of-module projects: develop and test in your local IDE, commit and push with Git, then submit through ProofLoop. The lesson practice studio does not submit or grade projects.</p>
+     <motion.header {...fade} className="proofloop-hero">
+@@ -259,7 +262,7 @@ export default function ProofLoopPage(){
+         <div className="proofloop-heading"><Code2 size={20}/><h2>Assignment lab</h2></div>
+         <p className="proofloop-muted">Instructor-published, original SAIRE coding challenges.</p>
+         {list.length?list.map(a=><button key={a.slug} className={`proofloop-choice ${chosen===a.slug?"active":""}`} disabled={a.locked} onClick={()=>pick(a.slug)}>
+-          <span>PHASE {String(a.phase).padStart(2,"0")} · {a.duration_days} DAYS</span><strong>{a.locked?"🔒 ":""}{a.title}</strong><small>{a.module}</small><ArrowRight size={18}/>
++          <span>PHASE {String(a.phase).padStart(2,"0")} · {a.duration_days ? count(a.duration_days, 'day').toUpperCase() : 'Duration pending'}</span><strong>{a.locked?"🔒 ":""}{a.title}</strong><small>{a.module}</small><ArrowRight size={18}/>
+         </button>):<div className="proofloop-empty">Assignments appear here when Django is running and the starter assignment has been seeded.</div>}
+         <div className="proofloop-sidehint"><Terminal size={19}/><div><strong>Prefer your terminal?</strong><small>Install our CLI and run <code>saire list</code>, <code>saire start</code> and <code>saire submit</code>.</small></div></div>
+       </motion.section>
+@@ -269,7 +272,7 @@ export default function ProofLoopPage(){
+           <h2>{selected.title}</h2><p>{selected.brief}</p>
+           <h3>You'll demonstrate</h3>
+           <ul className="proofloop-list">{selected.learning_outcomes.map(x=><li key={x}><CheckCircle2 size={17}/>{x}</li>)}</ul>
+-          <div className="proofloop-data"><span><CalendarClock size={17}/> {selected.duration_days}-day window after starting</span><span><Trophy size={17}/> 50% tests · 30% defence · 10% quality · 10% deadline</span></div>
++          <div className="proofloop-data"><span><CalendarClock size={17}/> {selected.duration_days ? `${count(selected.duration_days, 'day')} after starting` : 'Duration pending'}</span><span><Trophy size={17}/> 50% tests · 30% defence · 10% quality · 10% deadline</span></div>
+           {!token?<form className="proofloop-login" onSubmit={login}>
+             <h3><LockKeyhole size={18}/> Sign in to start</h3><p>For this pilot, an instructor creates your learner account in Django Admin.</p>
+             <label htmlFor="pl-username">Username</label><input id="pl-username" required autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)}/>
+@@ -304,7 +307,7 @@ export default function ProofLoopPage(){
+             </>}
+           </div>}
+           <div className="proofloop-questions"><h3>Five code defence questions</h3><ol>{selected.review_questions.map(q=><li key={q}>{q}</li>)}</ol></div>
+-          <div className="proofloop-mentor">
++          <div className="proofloop-mentor" id="project-mentor">
+             <div className="proofloop-mentor-top">
+               <div>
+                 <span className="proofloop-mentor-kicker"><BrainCircuit size={15}/> SAIRE SOCRATIC MENTOR</span>
+@@ -338,7 +341,7 @@ export default function ProofLoopPage(){
+               <button className="proofloop-primary" type="submit" disabled={mentorLoading || !mentorInput.trim()}><BrainCircuit size={17}/> {mentorLoading ? "Thinking…" : "Ask the mentor"}</button>
+             </form>
+           </div>
+-        </>:<div className="proofloop-empty">Choose a published assignment to get started.</div>}
++        </>:<div className="proofloop-empty">{chosen ? list.some(item => item.slug === chosen && item.locked) ? 'This project is locked. Complete its prerequisites to open the brief.' : 'This project is unavailable. Choose a published assignment.' : 'Choose a published assignment to get started.'}</div>}
+       </motion.section>
+     </div>
+     <LearningTwinPanel profile={learningTwin} loading={twinLoading} error={twinError}
+diff --git a/app/layout.tsx b/app/layout.tsx
+index 386dc3c024459b8cf25166623a660ea372dd4df1..586c6ff9b253081051e9709adc7ab217a7c417cf 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -1,5 +1,6 @@
+ import type { Metadata } from "next";
+ import "./globals.css";
++import "./workspace.css";
+ export const metadata: Metadata = {
+   title: "SAIRE-Linked Digital Learning | AI Engineering Mastery",
+   description: "Build smarter. Learn deeper. A project-based path from programming foundations to advanced AI and agent engineering by SAIRE-Linked.",
+diff --git a/app/page.tsx b/app/page.tsx
+index 395ef6b82cc9ac95e9687583a67921aee17ec4c6..c3f6b8b196775a13a3b857bf98859ca0affab201 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -1,3 +1,4 @@
++import AcademyNavigation from '@/components/AcademyNavigation';
+ import AcademySignIn from '@/components/AcademySignIn';
+ import AccountControls from '@/components/AccountControls';
+ import '@/public/academy-auth.css';
+@@ -10,6 +11,7 @@ export default function Home() {
+           <img src="/brand/saire-symbol.webp" alt="" />
+           <span>SAIRE-Linked Academy</span>
+         </a>
++        <AcademyNavigation compact />
+         <a href="/pathways/">Explore learning pathways</a>
+         <a href="/demo/">Explore the demo</a>
+         <AccountControls />
+diff --git a/app/pathways/page.tsx b/app/pathways/page.tsx
+index 39048903c775cd5dce6441da05490887a29a453a..502efe129003af1de122a88f9bde1a4361a5d770 100644
+--- a/app/pathways/page.tsx
++++ b/app/pathways/page.tsx
+@@ -2,6 +2,8 @@
+ 
+ import { useEffect, useState } from 'react';
+ import { api } from '@/lib/session-api';
++import AcademyNavigation from '@/components/AcademyNavigation';
++import { count } from '@/lib/academy-display';
+ import AccountControls from '@/components/AccountControls';
+ import { watchSessionEnd, SIGN_IN_URL } from '@/lib/browser-session';
+ import './pathways.css';
+@@ -36,9 +38,14 @@ export default function PathwaysPage() {
+   useEffect(() => watchSessionEnd(() => { setPaths([]); window.location.replace(SIGN_IN_URL); }), []);
+   return <div className="pathway-page">
+     <a className="pathway-skip" href="#pathway-content">Skip to pathways</a>
+-    <header><a href="/" className="pathway-brand">SAIRE<span> Academy</span></a><nav aria-label="Academy"><a href="/dashboard/">Dashboard</a><a href="/dashboard/?view=academy&section=handbook">Handbook</a><a href="/assignments/">Project lab</a><AccountControls /></nav></header>
++    <header><a href="/" className="pathway-brand">SAIRE<span> Academy</span></a><AcademyNavigation compact active="/pathways/" /><AccountControls /></header>
+     <main id="pathway-content">
+       <div className="pathway-intro"><span className="eyebrow">LEARN WITH A PURPOSE</span><h1>Choose your next<br/><span>useful skill.</span></h1><p>Explore AI Engineering and Computing &amp; IT. Shared modules keep the same lessons, project and saved progress across both pathways.</p><p className="pathway-motivation">Small, understood steps become skills you can trust.</p></div>
++      {paths.length > 0 && <section className="pathway-availability" aria-label="Published curriculum">{paths.map(path => {
++        const authored = path.units.filter(unit => unit.readiness === 'authored_slice').length;
++        return <a key={path.slug} href={'#title-' + path.slug}><strong>{path.title}</strong>
++          <span>{count(authored, 'module')} with lessons · {count(path.units.length - authored, 'outline')} only</span></a>;
++      })}</section>}
+       <aside className="pathway-policy" aria-label="How progression works"><strong>Your learning rules</strong><p>Setup labs are untimed. Starting a lesson starts its 14-day iteration. A missed lesson deadline fails the primary attempt; its one 7-day supplementary window ends 21 days after the original start, with the configured grade cap (70% by default).</p><p>Pass each lesson and the module’s reviewed final project before moving on. The new projects have their own 14-day deadlines. Outline units have no lessons to start. Sign in to see your personal access state.</p></aside>
+       <form className="pathway-filters" onSubmit={event => event.preventDefault()} aria-label="Filter learning units">
+         <label>Search units<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Try data, Python or systems"/></label>
+@@ -57,7 +64,7 @@ export default function PathwaysPage() {
+           <p className="pathway-disclaimer">{path.disclaimer}</p>
+           <p>Order below is a study recommendation. The required earlier modules and final projects are enforced by the Academy.</p>
+           <div className="pathway-grid">{units.map(unit => <article key={unit.module_id} className={`pathway-unit ${unit.readiness}`}>
+-            <div className="pathway-unit-top"><span>YEAR {unit.year} · {String(unit.position).padStart(2,'0')}</span><span>{unit.readiness === 'outline' ? 'Outline only' : `${unit.lesson_count} authored lessons`}</span></div>
++            <div className="pathway-unit-top"><span>YEAR {unit.year} · {String(unit.position).padStart(2,'0')}</span><span>{unit.readiness === 'outline' ? 'Outline only' : `${count(unit.lesson_count, 'authored lesson')}`}</span></div>
+             <h3>{unit.title}</h3><p>{unit.summary}</p>
+             {unit.shared && <p className="pathway-shared">Shared module · one set of progress</p>}
+             <p className="pathway-scope">{unit.scope}</p>
+diff --git a/app/workspace.css b/app/workspace.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..cc19af7bde528bc5df08f1bed4685904c5355357
+--- /dev/null
++++ b/app/workspace.css
+@@ -0,0 +1,32 @@
++.academy-v11-nav { display:grid; gap:1rem; }
++.academy-nav-group { display:grid; gap:.15rem; }
++.academy-nav-group > strong { color:#a5b5c7; font-size:.7rem; text-transform:uppercase; letter-spacing:.1em; padding:.25rem .8rem; }
++.academy-nav-group a { display:flex; align-items:center; gap:.6rem; padding:.5rem .8rem; color:#d3e1e9; text-decoration:none; font-size:.91rem; border-radius:.45rem; }
++.academy-nav-group a:hover,.academy-nav-group a[aria-current="page"] { background:#16313a; color:#80f0ca; }
++.academy-nav-menu { position:relative; z-index:12; color:#dde8ef; }
++.academy-nav-menu summary { cursor:pointer; font-weight:650; padding:.6rem .8rem; border:1px solid #36505b; border-radius:.6rem; background:#112029; }
++.academy-nav-menu .academy-v11-nav { position:absolute; left:0; top:100%; padding:1rem; width:min(34rem,85vw); max-height:65vh; overflow:auto; grid-template-columns:1fr 1fr; background:#0c1822; border:1px solid #36505b; border-radius:.6rem; box-shadow:0 1rem 3rem #0006; }
++.workspace-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(14rem,.45fr); align-items:start; gap:clamp(1rem,2vw,2rem); }
++.workspace-main { min-width:0; display:grid; gap:1.1rem; }
++.workspace-layout h1,.workspace-layout h2,.workspace-layout h3,.workspace-layout p { margin:0; overflow-wrap:anywhere; }
++.workspace-heading p,.workspace-focus > p,.workspace-mentor .mentor-context { color:#90d7c1; font-size:.86rem; font-weight:650; }
++.workspace-heading h1 { font-size:clamp(1.65rem,3vw,2.8rem); line-height:1.15; margin-top:.35rem; }
++.workspace-focus,.workspace-panel,.workspace-mentor { background:#101e2a; border:1px solid #29404e; border-radius:1rem; padding:clamp(1rem,2vw,1.6rem); }
++.workspace-focus { display:grid; justify-items:start; gap:.8rem; background:linear-gradient(120deg,#173b3d,#102433 75%); }
++.workspace-focus > svg,.workspace-mentor > svg { color:#70dfb4; }
++.workspace-panel h2,.workspace-mentor h2 { display:flex; align-items:center; gap:.5rem; font-size:1.18rem; }
++.workspace-panel p,.workspace-mentor p,.workspace-mentor small,.workspace-panel time,.workspace-panel li span { color:#b8c9d5; line-height:1.5; }
++.workspace-panel p,.workspace-panel ul,.workspace-panel button { margin-top:.65rem; }
++.workspace-panel progress { width:100%; height:.55rem; accent-color:#51dcac; }
++.workspace-panel ul { list-style:none; padding:0; margin-bottom:0; }
++.workspace-panel li { display:flex; justify-content:space-between; flex-wrap:wrap; gap:.4rem 1rem; padding:.65rem 0; border-top:1px solid #2c414e; }
++.workspace-panel a,.workspace-mentor a { color:#8ce6c7; }
++.workspace-mentor { display:grid; gap:.8rem; border-top:3px solid #6de1b7; }
++.workspace-mentor form { display:grid; gap:.65rem; }
++.workspace-mentor textarea { width:100%; border-radius:.4rem; padding:.6rem; background:#0c1722; color:#f0f6f8; border:1px solid #476171; }
++.mentor-history { max-height:15rem; overflow:auto; }
++.mentor-history p + p { margin-top:.65rem; }
++.pathway-availability { display:flex; flex-wrap:wrap; gap:1rem; margin:1rem 0; }
++.pathway-availability a { display:grid; gap:.35rem; padding:1rem; background:#14282d; color:#e1f5ed; border:1px solid #34574f; border-radius:.7rem; text-decoration:none; }
++@media(max-width:1100px) { .workspace-layout {grid-template-columns:minmax(0,1fr);} }
++@media(max-width:760px) { .sidebar:not(.mobile-open) {visibility:hidden;} .academy-nav-menu .academy-v11-nav {position:static; width:100%; grid-template-columns:1fr;} .workspace-panel li {display:grid;} }
+diff --git a/backend/assessments/api.py b/backend/assessments/api.py
+index 032e04927b7aed9985640d8762265145150aa7ae..aff1d90d05e5b59893aad941ca4ff4d5071ca988 100644
+--- a/backend/assessments/api.py
++++ b/backend/assessments/api.py
+@@ -106,7 +106,7 @@ def me(request):
+ @permission_classes([AllowAny])
+ def assignments(request):
+     from progression.services import module_access
+-    return Response([public_data(a) if module_access(request.user, a.module) else {'slug': a.slug, 'title': a.title, 'locked': True, 'module': a.module.name, 'phase': a.module.position} for a in visible(request.user)])
++    return Response([public_data(a) if module_access(request.user, a.module) else {'slug': a.slug, 'title': a.title, 'locked': True, 'module': a.module.name, 'phase': a.module.position, 'duration_days': a.duration_days} for a in visible(request.user)])
+ 
+ 
+ @api_view(['GET'])
+diff --git a/backend/assessments/tests.py b/backend/assessments/tests.py
+index e48d13a8f9122184d7f6ecc3c7df5d72039c1763..7202b369339f1ed048af4d30ea2dba71a7188383 100644
+--- a/backend/assessments/tests.py
++++ b/backend/assessments/tests.py
+@@ -52,6 +52,8 @@ class ProofLoopApiTests(TestCase):
+         response = self.client.get('/api/v1/assignments/')
+         self.assertEqual(response.status_code, 200)
+         self.assertTrue(response.json()[0]['locked'])
++        self.assertEqual(response.json()[0]['duration_days'], self.assignment.duration_days)
++        self.assertNotIn('brief', response.json()[0])
+         self.assertNotIn('review_questions', response.json()[0])
+         self.assignment.published=False;self.assignment.save()
+         self.assertEqual(self.client.get('/api/v1/assignments/').json(), [])
+diff --git a/backend/learning_twin/api.py b/backend/learning_twin/api.py
+index b5d9d5984aa5643782f496b42deb9f108d69e393..25a4e85dd463afbb8af64321c743c4ea2126724a 100644
+--- a/backend/learning_twin/api.py
++++ b/backend/learning_twin/api.py
+@@ -61,10 +61,20 @@ def build_profile(learner):
+                 'reviewed_at': review.reviewed_at.isoformat(),
+             })
+ 
++    # Reuse the same progression decisions as the assignment lab, once per course.
++    from progression.services import admin_access, course_progress
++    unlocked = {}
++    admin = admin_access(learner)
++    for mapping in mappings:
++        course_id = mapping.assignment.module.course_id
++        if not admin and course_id not in unlocked:
++            states, _ = course_progress(learner, course_id)
++            unlocked[course_id] = {pk for pk, state in states.items() if state.get('project_unlocked')}
+     results = []
+     for skill in skills:
+         mapped = [m for m in mappings if m.skill_id == skill.pk and m.assignment.published and m.assignment.module.published
+-                  and m.assignment.module.course.status == 'published']
++                  and m.assignment.module.course.status == 'published'
++                  and (admin or m.assignment.module_id in unlocked[m.assignment.module.course_id])]
+         possible_assignment = mapped[0].assignment.title if mapped else None
+         evidence = evidence_by_skill[skill.pk]
+         summary = summarise_skill(evidence, possible_assignment)
+diff --git a/backend/learning_twin/tests.py b/backend/learning_twin/tests.py
+index ed1df0325435d7c60cc44737c5eb6aaf6b840c24..d06764422cd1772b27f98bf44931ec7559cce13e 100644
+--- a/backend/learning_twin/tests.py
++++ b/backend/learning_twin/tests.py
+@@ -32,6 +32,18 @@ class LearningTwinApiTests(TestCase):
+         AssignmentSkill.objects.create(assignment=cls.assignment, skill=cls.skill, dimension='tests', weight=2)
+         AssignmentSkill.objects.create(assignment=cls.assignment, skill=cls.skill2, dimension='defence', weight=1)
+ 
++    def test_practice_suggestions_follow_project_access(self):
++        from courses.models import Lesson
++        from progression.models import LessonIteration
++        lesson = Lesson.objects.create(module=self.assignment.module, title='Prerequisite', published=True)
++        def suggestion():
++            return next(skill['next_assignment'] for skill in build_profile(self.learner)['skills']
++                        if skill['slug'] == self.skill.slug)
++        self.assertIsNone(suggestion())
++        LessonIteration.objects.create(learner=self.learner, lesson=lesson, status='passed',
++                                       started_at=timezone.now(), due_at=timezone.now() + timedelta(days=14))
++        self.assertEqual(suggestion(), self.assignment.title)
++
+     def auth(self, other=False):
+         return {'HTTP_AUTHORIZATION': f'Token {(self.other_token if other else self.token).key}'}
+ 
+diff --git a/components/AcademyHub.tsx b/components/AcademyHub.tsx
+index af822118a05a7681e4d86a1a0c14370a20c2c75e..732ea727e0c88ef2885c46f0dbccbc170460b0a8 100644
+--- a/components/AcademyHub.tsx
++++ b/components/AcademyHub.tsx
+@@ -1,6 +1,7 @@
+ 'use client';
+ 
+ import { useEffect, useState } from 'react';
++import { count } from '@/lib/academy-display';
+ import { api } from '@/lib/session-api';
+ import AcademyHandbook, { type Orientation } from './AcademyHandbook';
+ import AcademySetup, { type SetupModule } from './AcademySetup';
+@@ -65,7 +66,7 @@ function StudyEvidence({ glossary }: {glossary: boolean}) {
+     return <>
+       <h2>Glossary</h2>
+       <label className="study-label">Search terms<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label>
+-      <p role="status">{terms.length} terms</p>
++      <p role="status">{count(terms.length, 'term')}</p>
+       <dl>{terms.map(entry => <div className="study-panel" key={entry.term}>
+         <dt><strong>{entry.term}</strong></dt><dd>{entry.definition}{entry.example && <p>{entry.example}</p>}</dd>
+       </div>)}</dl>
+diff --git a/components/AcademyNavigation.tsx b/components/AcademyNavigation.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..fe6f28ef0b7b22291ec99b0f4647036dad973bf3
+--- /dev/null
++++ b/components/AcademyNavigation.tsx
+@@ -0,0 +1,30 @@
++import { BookOpen, CalendarDays, ClipboardList, Compass, FileText, GraduationCap, LayoutDashboard, Map, NotebookPen, Rocket, ShieldCheck, Target, Terminal } from 'lucide-react';
++
++const groups = [
++  { title: 'Workspace', links: [
++    {label: 'Dashboard', to: 'overview', icon: LayoutDashboard}, {label: 'Study planner', to: 'planner', icon: CalendarDays}] },
++  { title: 'Smart Classroom', links: [
++    {label: 'My classroom', to: 'classroom', icon: BookOpen}, {label: 'Course roadmap', to: 'roadmap', icon: Map},
++    {label: 'Learning pathways', to: '/pathways/', icon: Compass}] },
++  { title: 'Engineering Lab', links: [
++    {label: 'Project briefs', to: 'projects', icon: Rocket}, {label: 'Getting ready', to: 'academy&section=setup', icon: Terminal}] },
++  { title: 'ProofLoop Centre', links: [
++    {label: 'Assignments & reviews', to: '/assignments/', icon: ClipboardList}] },
++  { title: 'Learning Twin', links: [
++    {label: 'My skill evidence', to: '/assignments/#learning-twin', icon: Target}, {label: 'Revision & milestones', to: 'academy&section=revision', icon: NotebookPen}] },
++  { title: 'Support', links: [
++    {label: 'Study hub', to: 'academy&section=welcome', icon: GraduationCap}, {label: 'Handbook & help', to: 'academy&section=handbook', icon: ShieldCheck},
++    {label: 'Resource library', to: 'resources', icon: FileText}] },
++];
++
++export default function AcademyNavigation({active, course, compact = false, demo = false}: {active?: string; course?: string; compact?: boolean; demo?: boolean}) {
++  const navigation = <nav className="academy-v11-nav" aria-label="Academy navigation">{groups.map(group =>
++    <div key={group.title} className="academy-nav-group"><strong>{group.title}</strong>
++      {group.links.map(({label, to, icon: Icon}) => {
++        const base = demo && !to.startsWith('academy') ? '/demo/' : '/dashboard/';
++        const href = to.startsWith('/') ? to : `${base}?view=${to}${course ? '&course=' + encodeURIComponent(course) : ''}`;
++        return <a key={to} href={href} aria-current={to === active ? 'page' : undefined}><Icon size={16} aria-hidden="true"/>{label}</a>;
++      })}
++    </div>)}</nav>;
++  return compact ? <details className="academy-nav-menu"><summary>Academy menu</summary>{navigation}</details> : navigation;
++}
+diff --git a/components/AcademySignIn.tsx b/components/AcademySignIn.tsx
+index 22880ff011e5219483872303656a0ac6f035e022..aadc85944524537fbdefbb3fadd96db51281c66e 100644
+--- a/components/AcademySignIn.tsx
++++ b/components/AcademySignIn.tsx
+@@ -2,10 +2,13 @@
+ 
+ import { useEffect, useState } from 'react';
+ import { Github } from 'lucide-react';
++import { dashboardDestination } from '@/lib/academy-display';
+ import { api } from '@/lib/session-api';
+ import { watchSessionEnd } from '@/lib/browser-session';
+ 
+ export default function AcademySignIn() {
++  const [destination, setDestination] = useState('/dashboard/');
++  const [returning, setReturning] = useState(false);
+   const [providers, setProviders] = useState<string[] | null>(null);
+   const [signedIn, setSignedIn] = useState(false);
+   const [unavailable, setUnavailable] = useState(false);
+@@ -14,6 +17,9 @@ export default function AcademySignIn() {
+   useEffect(() => {
+     let active = true, ended = false;
+     const stop = watchSessionEnd(() => { ended = true; setSignedIn(false); setLoggedOut(true); });
++    const requested = new URLSearchParams(window.location.search).get('next');
++    setDestination(dashboardDestination(requested));
++    setReturning(Boolean(requested));
+     setLoggedOut(new URLSearchParams(window.location.search).get('signed_out') === '1');
+     api<{ providers: string[] }>('/auth/csrf/').then(
+       data => setProviders(data.providers),
+@@ -28,14 +34,15 @@ export default function AcademySignIn() {
+       <p className="entry-eyebrow">YOUR LEARNING SPACE</p>
+       <h2 id="signin-title">{signedIn ? 'Welcome back' : 'Sign in to the Academy'}</h2>
+       {loggedOut && !signedIn && <p role="status">You’re logged out. Sign in below to continue learning.</p>}
++      {returning && <p role="status">{signedIn ? 'Your requested Academy page is ready.' : 'Sign in to open your requested Academy page. You will return there after signing in.'}</p>}
+       <p>Open your roadmap, project lab, Mentor and Learning Twin from your dashboard.</p>
+-      {signedIn ? <a className="entry-button" href="/dashboard/">Open your dashboard</a> : (
++      {signedIn ? <a className="entry-button" href={destination}>{returning ? "Continue to your requested page" : "Open your dashboard"}</a> : (
+         <div className="entry-provider-list">
+           {['google', 'github'].map(provider => {
+             const name = provider === 'google' ? 'Google' : 'GitHub';
+             const icon = provider === 'google' ? <span aria-hidden="true" className="entry-google">G</span> : <Github size={20} aria-hidden="true" />;
+             return providers?.includes(provider) ? (
+-              <a className="entry-button" key={provider} href={`/accounts/${provider}/login/?next=/dashboard/`}>
++              <a className="entry-button" key={provider} href={`/accounts/${provider}/login/?next=${encodeURIComponent(destination)}`}>
+                 {icon} Continue with {name}
+               </a>
+             ) : (
+@@ -46,7 +53,7 @@ export default function AcademySignIn() {
+           })}
+           {unavailable && <p role="status">Sign-in is temporarily unavailable.</p>}
+           {providers && providers.length < 2 && <p role="status">Disabled providers need credentials in the Academy settings.</p>}
+-          <a className="entry-pilot" href="/accounts/login/?next=/dashboard/">Use a pilot account</a>
++          <a className="entry-pilot" href={`/accounts/login/?next=${encodeURIComponent(destination)}`}>Use a pilot account</a>
+         </div>
+       )}
+     </section>
+diff --git a/components/ClassroomGate.tsx b/components/ClassroomGate.tsx
+index 4a871b0d032f66a3de4c7b1f0a78c86e02fbc454..d00ec53e62967e4477590031c233f02ff728a70b 100644
+--- a/components/ClassroomGate.tsx
++++ b/components/ClassroomGate.tsx
+@@ -7,7 +7,7 @@ export default function ClassroomGate({entry, lessonCount, onRoadmap}: {
+   return <article className="lesson-article empty-course classroom-gate" aria-labelledby="classroom-gate-title">
+     <h2 id="classroom-gate-title">{entry?.title ?? (locked ? 'Your lessons are locked by module requirements' : 'This course has no published lessons yet')}</h2>
+     <p>{entry?.message ?? (locked ? 'The lessons are present. Complete the required earlier module and its reviewed final project to open them.' : 'Detailed lessons still need to be published for this course.')}</p>
+-    {locked && <p>{lessonCount} published lessons in this course. Opening a prerequisite classroom does not start a timer; a timer starts only when you choose Start lesson.</p>}
++    {locked && <p>{lessonCount} published {lessonCount === 1 ? 'lesson' : 'lessons'} in this course. Opening a prerequisite classroom does not start a timer; a timer starts only when you choose Start lesson.</p>}
+     {!!entry?.requirements.length && <div className="study-panel">
+       <h3>Required modules, in order</h3>
+       <ol>{entry.requirements.map(required => <li key={required.module_id}>{required.title}</li>)}</ol>
+diff --git a/components/DashboardMentor.tsx b/components/DashboardMentor.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..c30fc2a2957e0a8072cb1965cfdaaa4df2be581e
+--- /dev/null
++++ b/components/DashboardMentor.tsx
+@@ -0,0 +1,49 @@
++'use client';
++
++import {useEffect, useState, type FormEvent} from 'react';
++import {BrainCircuit} from 'lucide-react';
++import {api} from '@/lib/session-api';
++
++type Message = {role: 'learner' | 'mentor'; text: string};
++type Thread = {mode: 'ai' | 'unconfigured'; provider: string | null; messages: Message[]};
++
++export default function DashboardMentor({assignment, title, lesson}: {assignment?: string; title?: string; lesson?: string}) {
++  const [thread, setThread] = useState<Thread | null>(null);
++  const [input, setInput] = useState('');
++  const [error, setError] = useState('');
++  const [sending, setSending] = useState(false);
++  const endpoint = assignment ? `/assignments/${encodeURIComponent(assignment)}/mentor/` : '';
++  useEffect(() => {
++    let active = true;
++    if (endpoint) api<Thread>(endpoint).then(data => {if (active) setThread(data);},
++      () => {if (active) setError('The project conversation could not be loaded.');});
++    return () => {active = false;};
++  }, [endpoint]);
++  async function send(event: FormEvent) {
++    event.preventDefault();
++    if (!input.trim() || sending || thread?.mode !== 'ai') return;
++    setSending(true); setError('');
++    try {
++      const reply = await api<{learner_message: Message; mentor_message: Message}>(endpoint, {message: input.trim(), use_learning_twin: false});
++      setThread(previous => previous && ({...previous, messages: [...previous.messages, reply.learner_message, reply.mentor_message]}));
++      setInput('');
++    } catch {setError('Your message could not be sent. Your draft is still here.');}
++    finally {setSending(false);}
++  }
++  return <aside className="workspace-mentor"><BrainCircuit size={28} aria-hidden="true"/><h2>Socratic Mentor</h2>
++    <p className="mentor-context">{title || lesson || 'Study planning'}</p>
++    {thread?.mode === 'ai' ? <>
++      <div className="mentor-history" aria-live="polite">{thread.messages.slice(-4).map((item, i) =>
++        <p key={i}><b>{item.role === 'mentor' ? 'Mentor' : 'You'}</b><br/>{item.text}</p>)}</div>
++      <form onSubmit={send}><label htmlFor="workspace-question">Ask about this project</label>
++        <textarea id="workspace-question" rows={3} maxLength={1200} value={input} onChange={event => setInput(event.target.value)}/>
++        <small>Sent to {thread.provider || 'the configured AI provider'} and saved in your project conversation.</small>
++        <button className="btn btn-primary" disabled={sending || !input.trim()}>{sending ? 'Sending…' : 'Ask for a hint'}</button></form>
++    </> : <><h3>Study prompt</h3><p>{assignment ? 'Pick one requirement from the brief. What input and expected result would show that it works?' :
++      lesson ? 'Before opening the lesson, write down one thing you already know about this topic and one question to answer.' :
++      'Which prerequisite could you complete in your next study session?'}</p>
++      <small>{assignment ? thread ? 'Live AI is unconfigured for this project.' : error ? '' : 'Checking project mentor availability…' : 'Start an unlocked project to open its mentor conversation.'}</small></>}
++    {error && <p role="alert">{error}</p>}
++    <a href={assignment ? `/assignments/?assignment=${encodeURIComponent(assignment)}#project-mentor` : '/assignments/'}>{assignment ? 'Open project conversation' : 'Explore assignments'} →</a>
++  </aside>;
++}
+diff --git a/components/DashboardWorkspace.tsx b/components/DashboardWorkspace.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..70affb760dc1606e5a79ecc422387a6d8a4177ac
+--- /dev/null
++++ b/components/DashboardWorkspace.tsx
+@@ -0,0 +1,43 @@
++import { ArrowRight, BookOpen, Clock3, Flag } from 'lucide-react';
++import { count, timeframe } from '@/lib/academy-display';
++import type { LiveClassroom } from './LiveLearningPlatform';
++import DashboardMentor from './DashboardMentor';
++
++const displayDate = (value: string) => new Date(value).toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'});
++
++export default function DashboardWorkspace({live, openLesson, roadmap}: {live: LiveClassroom; openLesson: (id: string) => void; roadmap: () => void}) {
++  const {course, iterations} = live;
++  const available = course.lessons.filter(lesson => !lesson.locked);
++  const active = available.filter(lesson => ['active', 'supplementary'].includes(iterations[lesson.id]?.status));
++  const next = active[0] ?? available.find(lesson => iterations[lesson.id]?.status !== 'passed');
++  const passed = course.lessons.filter(lesson => iterations[lesson.id]?.status === 'passed').length;
++  const authored = new Set(course.lessons.map(lesson => lesson.phaseId)).size;
++  const finals = course.phases.flatMap(module => module.progress?.final_project ? [{...module.progress.final_project, unlocked: module.progress.project_unlocked}] : []);
++  const projects = live.projects.filter(attempt => finals.some(project => project.slug === attempt.assignment));
++  const current = projects.find(attempt => finals.some(project => project.slug === attempt.assignment && project.unlocked && project.status !== 'passed'));
++  const projectTitle = (slug: string) => finals.find(project => project.slug === slug)?.title ?? slug;
++  const needsOrientation = !live.admin && !live.orientation.acknowledged;
++  const deadlines = active.map(lesson => ({name: lesson.title, date: iterations[lesson.id].supplementary_due_at || iterations[lesson.id].due_at}))
++    .concat(projects.filter(project => !project.submissions.length).map(project => ({name: projectTitle(project.assignment), date: project.due_at})))
++    .sort((a,b) => Date.parse(a.date) - Date.parse(b.date));
++  return <div className="workspace-layout"><div className="workspace-main">
++    <header className="workspace-heading"><p>Learner dashboard</p><h1>Welcome back, {live.username}.</h1></header>
++    <section className="workspace-focus"><BookOpen aria-hidden="true"/><p>{course.title}</p>
++      <h2>{needsOrientation ? 'Get ready for your first lesson' : next?.title ?? (passed && passed === course.lessons.length ? 'Your lessons are complete' : 'Explore your course roadmap')}</h2>
++      {needsOrientation ? <a className="btn btn-primary" href={'/dashboard/?view=academy&section=handbook&course=' + encodeURIComponent(course.slug)}>Open the handbook <ArrowRight size={16}/></a> :
++        <button className="btn btn-primary" onClick={() => next ? openLesson(next.id) : roadmap()}>{next ? active.length ? 'Resume lesson' : 'Open classroom' : 'View roadmap'} <ArrowRight size={16}/></button>}
++    </section>
++    <section className="workspace-panel"><h2>Course progress</h2>
++      <p>{passed} of {count(course.lessons.length, 'published lesson')} passed</p>
++      <progress aria-label="Published lessons passed" value={passed} max={course.lessons.length || 1}/>
++      <p>{count(authored, 'module')} with lessons · {count(course.phases.length - authored, 'outline')} · {timeframe(course.estimated_months)}</p>
++      <button className="link-button" onClick={roadmap}>View course roadmap →</button>
++    </section>
++    <section className="workspace-panel"><h2><Clock3 size={19}/> Deadlines</h2>{deadlines.length ? <ul>{deadlines.map(item =>
++      <li key={item.name + item.date}><strong>{item.name}</strong><time dateTime={item.date}>{displayDate(item.date)}</time></li>)}</ul> : <p>No active deadlines in this course.</p>}</section>
++    <section className="workspace-panel"><h2><Flag size={19}/> Project reviews</h2>{projects.length ? <ul>{projects.map(project =>
++      <li key={project.assignment}><a href={'/assignments/?assignment=' + encodeURIComponent(project.assignment)}>{projectTitle(project.assignment)}</a>
++        <span>{finals.find(final => final.slug === project.assignment)?.status.replaceAll('_', ' ')}</span></li>)}</ul> : <p>Your first project attempt will appear here after you start it.</p>}</section>
++    <a className="link-button" href="/pathways/">Browse learning pathways →</a>
++  </div><DashboardMentor key={current?.assignment ?? course.slug} assignment={current?.assignment} title={current && projectTitle(current.assignment)} lesson={next?.title}/></div>;
++}
+diff --git a/components/LearningPlatform.tsx b/components/LearningPlatform.tsx
+index f0ca5a499d34161d68ef094733b7b651600e31ea..75f36a6ff06890ed3ea504364a19379c78cd03e7 100644
+--- a/components/LearningPlatform.tsx
++++ b/components/LearningPlatform.tsx
+@@ -15,6 +15,9 @@ import { DEFAULT_COURSE_SLUG, demoCourse, type CmsLesson, type QuizQuestion } fr
+ import { api } from '@/lib/session-api';
+ import AcademyHub, { type HubSection } from './AcademyHub';
+ import ClassroomGate from './ClassroomGate';
++import AcademyNavigation from './AcademyNavigation';
++import DashboardWorkspace from './DashboardWorkspace';
++import { count, timeframe } from '@/lib/academy-display';
+ import AccountControls from './AccountControls';
+ import PythonPractice from './PythonPractice';
+ import { FormativePanel, GuidedLesson, ResourceLinks, type LessonGuide, type Resource } from './LessonStudyTools';
+@@ -42,7 +45,6 @@ function Brand({ compact=false }: {compact?:boolean}) {
+ }
+ function Chip({children,variant="muted"}: {children:React.ReactNode; variant?:"muted"|"green"|"blue"|"purple"}) { return <span className={`chip chip-${variant}`}>{children}</span> }
+ function SectionHeading({eyebrow,title,description,right}: {eyebrow:string;title:string;description?:string;right?:React.ReactNode}) { return <div className="section-header"><div><div className="eyebrow"><span className="eyebrow-dot"/>{eyebrow}</div><h2>{title}</h2>{description && <p>{description}</p>}</div>{right}</div> }
+-function ProgressBar({value}: {value:number}) {return <div className="progress-track" role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}><div className="progress-fill" style={{width:`${Math.min(100,Math.max(0,value))}%`}} /></div>}
+ function CodePanel({code,language="Python"}: {code:string;language?:string}) {
+  const [copied,setCopied]=useState(false);
+  function copy(){ if(typeof navigator!=="undefined" && navigator.clipboard){navigator.clipboard.writeText(code).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1700)}).catch(()=>{});} }
+@@ -55,7 +57,7 @@ function LessonNotes({collapse, children}: {collapse: boolean; children: React.R
+ }
+ 
+ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+- const [view,setView]=useState<View>(live && !live.admin && !live.orientation.acknowledged ? 'academy' : 'overview');
++ const [view,setView]=useState<View>('overview');
+  const [hubSection, setHubSection] = useState<HubSection>('welcome');
+  const [hubPhase, setHubPhase] = useState<number>();
+  const [textFirst, setTextFirst] = useState(false);
+@@ -78,6 +80,19 @@ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+  const [quizSubmitted,setQuizSubmitted]=useState(false);
+  const [toast,setToast]=useState("");
+  const [sidebarOpen,setSidebarOpen]=useState(true);
++ // The URL follows classroom actions as well as navigation links. Refresh and
++ // sign-in therefore return to the displayed course and lesson.
++ useEffect(() => {
++   if (!live || !hydrated) return;
++   const url = new URL(window.location.href);
++   url.searchParams.set('course', courseSlug);
++   url.searchParams.set('view', view);
++   if (view === 'academy') url.searchParams.set('section', hubSection);
++   else url.searchParams.delete('section');
++   if (view !== 'classroom') url.searchParams.delete('lesson');
++   window.history.replaceState(window.history.state, '', url);
++ }, [hydrated, courseSlug, view, hubSection]);
++
+ 
+  // Each course has separate progress. The original course reads legacy browser data.
+  useEffect(()=>{
+@@ -96,11 +111,10 @@ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('view');
+    const section = params.get('section');
+-   if (live && requested === 'roadmap' && (live.admin || live.orientation.acknowledged)) setView('roadmap');
+-   if (live && requested === 'classroom' && (live.admin || live.orientation.acknowledged)) setView('classroom');
++   if (requested === 'overview' || requested === 'roadmap' || requested === 'classroom' || requested === 'projects') setView(requested);
+    if (live && requested === 'academy') {
+      setView('academy');
+-     if (section === 'handbook' || section === 'setup') setHubSection(section);
++     if (section === 'welcome' || section === 'handbook' || section === 'setup' || section === 'glossary' || section === 'notebook' || section === 'revision') setHubSection(section);
+    }
+    try { setTextFirst(localStorage.getItem('saire-text-first') === '1'); } catch { /* browser storage is optional */ }
+    if (requested === 'planner' || requested === 'resources') setView(requested);
+@@ -195,6 +209,11 @@ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+      return;
+    }
+    setSaved(old => ({ ...old, lesson: lesson.id, phase: lesson.phaseId }));
++   if (live) {
++     const url = new URL(window.location.href);
++     url.searchParams.set('lesson', lesson.id);
++     window.history.replaceState(window.history.state, '', url);
++   }
+    setQuizAnswers({});
+    setQuizSubmitted(false);
+    setResult(null);
+@@ -227,16 +246,18 @@ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+  function updateMinutes(i:number,value:number){setSaved(old=>({...old,minutes:old.minutes.map((v,j)=>i===j?value:v)}))}
+  const nav:[View,LucideIcon,string][]=[["overview",LayoutDashboard,"Overview"],["roadmap",Layers3,"Learning roadmap"],["classroom",BookOpen,"My classroom"],["projects",Rocket,"Project lab"],["planner",CalendarDays,"Study planner"],["resources",FileText,"Resource library"]];
+  if (live) nav.push(["academy", GraduationCap, "Study Hub"]);
+- const navLinks=<><div className="nav-label">YOUR LEARNING SPACE</div>{nav.map(([id,Icon,label])=><button type="button" key={id} className={`nav-link ${view===id?"active":""}`} onClick={()=>navigate(id)} aria-current={view===id?"page":undefined}><Icon size={18}/>{label}{view===id&&<span className="nav-active-dot"/>}</button>)}</>;
+  return <MotionConfig reducedMotion="user"><div className={`app-shell ${!sidebarOpen?"compact-sidebar":""} ${textFirst ? "text-first" : ""}`}>
+-  <aside className={`sidebar ${menuOpen?"mobile-open":""}`} aria-label="Primary navigation">
++  <aside id="academy-sidebar" className={`sidebar ${menuOpen?"mobile-open":""}`} aria-label="Primary navigation">
+     <div className="sidebar-top"><Brand/><button className="icon-button mobile-close" onClick={()=>setMenuOpen(false)} aria-label="Close navigation"><X size={20}/></button></div>
+-    <div className="sidebar-scroll"><nav>{navLinks}</nav><div className="sidebar-card"><div className="sidebar-card-top"><span className="pulse-dot"/> YOUR JOURNEY</div><div className="sidebar-card-title">Build skills.<br/><em>Build the future.</em></div><div className="sidebar-progress-meta"><span>Learning progress</span><b>{progress}%</b></div><ProgressBar value={progress}/><div className="sidebar-card-foot">{completedCount} of {lessons.length} published lessons complete</div></div><div className="sidebar-bottom-links"><a href="/pathways/"><GraduationCap size={15}/> Learning pathways</a><a href="/assignments"><Terminal size={15}/> SAIRE ProofLoop · Coding Lab</a><a href="/assignments#learning-twin"><BrainCircuit size={15}/> Learning Twin · My Skills</a><a href="https://www.sairelinked.com" target="_blank" rel="noreferrer"><ArrowUpRight size={15}/> SAIRE-Linked Website</a><a href="https://www.sairelinked.com/packages/growth" target="_blank" rel="noreferrer"><ArrowUpRight size={15}/> Explore Growth Package</a>{live&&<button type="button" className="nav-link live-sidebar-signout" onClick={()=>void live.signOut().catch(()=>setToast("Could not log out. Try again."))}>Log out</button>}</div></div>
++    <div className="sidebar-scroll">
++      <AcademyNavigation demo={!live} course={live ? courseSlug : undefined} active={view === 'academy' ? 'academy&section=' + hubSection : view} />
++      <div className="sidebar-bottom-links"><a href="https://www.sairelinked.com" target="_blank" rel="noreferrer">SAIRE-Linked website</a><a href="https://www.sairelinked.com/packages/growth" target="_blank" rel="noreferrer">Explore Growth Package</a></div>
++    </div>
+     <div className="sidebar-footer"><div className="avatar">SL</div><div><strong>{live?.username ?? "My learning space"}</strong><small>{live ? "Academy account" : "Local browser profile"}</small></div><span className="avatar-online"/></div>
+   </aside>
+   <div className="sidebar-overlay" onClick={()=>setMenuOpen(false)} aria-hidden="true"/>
+   <div className="main-shell">
+-    <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={()=>setMenuOpen(true)} aria-label="Open menu"><Menu size={20}/></button><button className="icon-button desktop-menu" onClick={()=>setSidebarOpen(v=>!v)} aria-label="Toggle sidebar"><Menu size={18}/></button><div className="breadcrumb"><span>SAIRE Academy</span><ChevronRight size={14}/><strong>{nav.find(n=>n[0]===view)?.[2]}</strong></div></div><div className="topbar-actions"><label className="course-picker-label" htmlFor="course-picker">COURSE</label><select id="course-picker" className="course-picker" value={courseSlug} onChange={e=>live?.selectCourse(e.target.value)} aria-label="Choose a course">{!live&&<option value={DEFAULT_COURSE_SLUG}>AI Engineering Mastery</option>}{catalog.map(item=><option key={item.slug} value={item.slug}>{item.title}</option>)}</select><span className="live-badge"><span className="pulse-dot"/> LEARNING IN PROGRESS</span>{live ? <AccountControls username={live.username} onLogout={live.signOut} /> : <a className="btn btn-outline" href="/#signin">Sign in</a>}</div></header>
++    <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" aria-expanded={menuOpen} aria-controls="academy-sidebar" onClick={()=>setMenuOpen(true)} aria-label="Open menu"><Menu size={20}/></button><button className="icon-button desktop-menu" onClick={()=>setSidebarOpen(v=>!v)} aria-label="Toggle sidebar"><Menu size={18}/></button><div className="breadcrumb"><span>SAIRE Academy</span><ChevronRight size={14}/><strong>{nav.find(n=>n[0]===view)?.[2]}</strong></div></div><div className="topbar-actions"><label className="course-picker-label" htmlFor="course-picker">COURSE</label><select id="course-picker" className="course-picker" value={courseSlug} onChange={e=>live?.selectCourse(e.target.value)} aria-label="Choose a course">{!live&&<option value={DEFAULT_COURSE_SLUG}>AI Engineering Mastery</option>}{catalog.map(item=><option key={item.slug} value={item.slug}>{item.title}</option>)}</select><span className="live-badge"><span className="pulse-dot"/> LEARNING IN PROGRESS</span>{live ? <AccountControls username={live.username} onLogout={live.signOut} /> : <a className="btn btn-outline" href="/#signin">Sign in</a>}</div></header>
+     <main className="content">
+       <div className={`api-banner ${live ? 'api-connected' : 'api-offline'}`} role="status">
+         <span className="pulse-dot" />
+@@ -255,27 +276,29 @@ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+         <AcademyHub section={hubSection} select={setHubSection} modules={phases} phase={hubPhase}
+           orientation={live.orientation} refresh={live.refresh} />
+       </motion.div>}
+-      {view==="overview"&&<motion.div key="overview" {...motionProps} className="page-content">
++      {view === "overview" && live && <DashboardWorkspace live={live} openLesson={beginLesson} roadmap={() => navigate("roadmap")}/>}
++      {view==="overview"&&!live&&<motion.div key="overview" {...motionProps} className="page-content">
+         <div className="hero"><div className="hero-orb hero-orb-1"/><div className="hero-orb hero-orb-2"/><div className="hero-grid"/><div className="hero-content"><span className="hero-kicker"><Sparkles size={13}/> THE FUTURE IS ENGINEERED, NOT GUESSED <span>· 2026—2027</span></span><h1>Build the mind.<br/><span>Engineer the future.</span></h1><p>{course.description}</p><div className="hero-course-tag">NOW STUDYING · {course.title}</div><div className="hero-buttons"><button className="btn btn-primary" disabled={!suggested} onClick={()=>beginLesson()}><Play size={16} fill="currentColor"/>{completedCount?"Continue learning":"Start learning"}<ArrowRight size={17}/></button><button className="btn btn-ghost" onClick={()=>navigate("roadmap")}>Explore the roadmap <ArrowUpRight size={16}/></button></div><div className="hero-bottom"><span><CheckCircle2 size={15}/> Practical first</span><span><CheckCircle2 size={15}/> Real projects</span><span><CheckCircle2 size={15}/> Career focused</span></div></div>{!textFirst && <img className="hero-logo" src="/brand/saire-pcb.webp" alt="SAIRE-Linked circuit heart emblem"/>}<div className="hero-side-tag">SAIRE-Linked / DIGITAL LEARNING PLATFORM</div></div>
+-        {catalog.length>1&&<section className="course-library"><div className="course-library-heading"><div><span className="eyebrow">SAIRE-Linked Academy</span><h2>Explore our courses</h2><p>New courses become available here when published in Django Admin.</p></div><span className="course-library-count">{catalog.length} COURSES AVAILABLE</span></div><div className="course-library-grid">{catalog.map(item=><button key={item.slug} className={`course-tile ${courseSlug===item.slug?"current":""}`} onClick={()=>live?.selectCourse(item.slug)}><div className="course-tile-top"><GraduationCap size={23}/><span>{item.phase_count} PHASES · {item.lesson_count} LESSONS</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="course-tile-bottom">{courseSlug===item.slug?"CURRENT COURSE":"EXPLORE COURSE"}<ArrowRight size={16}/></div></button>)}</div></section>}
+-        <div className="stat-grid"><Stat icon={Layers3} value={String(phases.length)} label="Learning phases" note="Foundation to expert path"/><Stat icon={BookOpen} value={String(totalTopics)} label="Curriculum topics" note={`${lessons.length} tutorials published`}/><Stat icon={Rocket} value={String(projects.length)} label="Portfolio projects" note="Build real-world skills"/><Stat icon={Clock3} value={course.estimated_months} label="Learning timeframe" note="Flexible, competence-led"/></div>
++        <div className="stat-grid"><Stat icon={Layers3} value={String(phases.length)} label="Learning phases" note="Foundation to expert path"/><Stat icon={BookOpen} value={String(totalTopics)} label="Curriculum topics" note={`${count(lessons.length, 'tutorial')} published`}/><Stat icon={Rocket} value={String(projects.length)} label="Portfolio projects" note="Build real-world skills"/><Stat icon={Clock3} value={timeframe(course.estimated_months)} label="Learning timeframe" note="Flexible, competence-led"/></div>
+         <div className="split-section"><div className="section-main"><SectionHeading eyebrow="PICK UP WHERE YOU LEFT OFF" title="Your next step" description="Small, consistent steps lead to meaningful progress."/><div className="continue-card"><div className="continue-icon"><Terminal size={27}/></div><div className="continue-body"><Chip variant="green">PHASE {currentLesson.phaseId.toString().padStart(2,"0")} · CURRENT LESSON</Chip><h3>{currentLesson.title}</h3><p>{currentLesson.objective || "Open the classroom to begin or resume your next lesson."}</p><div className="lesson-meta"><span><Clock3 size={14}/>{currentLesson.minutes} min lesson</span><span><BookOpen size={14}/>{currentLesson.difficulty}</span></div></div><button className="circle-arrow" disabled={!selected} aria-label="Open current lesson" onClick={()=>beginLesson(currentLesson.id)}><ArrowUpRight size={23}/></button></div></div><div className="insight-card"><div className="insight-heading"><Lightbulb size={19}/><span>THE SAIRE APPROACH</span></div><h3>Understand first.<br/><em>Automate second.</em></h3><p>Master the underlying logic before relying on frameworks or AI tools. Strong foundations create engineers who can design, debug and lead.</p><button onClick={()=>navigate("planner")}>Plan your study week <ArrowRight size={16}/></button></div></div>
+-        <SectionHeading eyebrow="THE LEARNING JOURNEY" title={course.title} description="A carefully sequenced path from fundamentals to confident engineering." right={<button className="link-button" onClick={()=>navigate("roadmap")}>All {phases.length} phases <ArrowRight size={17}/></button>}/>
+-        <div className="phase-feature-grid">{phases.slice(0,6).map(p=>{const Icon=icons[p.icon]??Code2;return <button className="phase-feature-card" key={p.id} onClick={()=>{setPhaseOpen(p.id);navigate("roadmap")}}><span className="phase-feature-no">{String(p.id).padStart(2,"0")} / {phases.length}</span><div className={`phase-feature-icon icon-${p.category}`}><Icon size={23}/></div><h3>{p.name}</h3><p>{p.desc}</p><span className="phase-feature-bottom">{p.duration} weeks <ArrowUpRight size={17}/></span></button>})}</div>
++        <SectionHeading eyebrow="THE LEARNING JOURNEY" title={course.title} description="A carefully sequenced path from fundamentals to confident engineering." right={<button className="link-button" onClick={()=>navigate("roadmap")}>All {count(phases.length, 'phase')} <ArrowRight size={17}/></button>}/>
++        <div className="phase-feature-grid">{phases.slice(0,6).map(p=>{const Icon=icons[p.icon]??Code2;return <button className="phase-feature-card" key={p.id} onClick={()=>{setPhaseOpen(p.id);navigate("roadmap")}}><span className="phase-feature-no">{String(p.id).padStart(2,"0")} / {phases.length}</span><div className={`phase-feature-icon icon-${p.category}`}><Icon size={23}/></div><h3>{p.name}</h3><p>{p.desc}</p><span className="phase-feature-bottom">{count(p.duration, 'week')} <ArrowUpRight size={17}/></span></button>})}</div>
+         <div className="banner-gradient"><div><span className="eyebrow">LEARN BY BUILDING</span><h2>Real projects. Real engineering.</h2><p>Turn milestones into practical portfolio projects that demonstrate your engineering skills.</p><button className="btn btn-white" onClick={()=>navigate("projects")}>Enter the project lab <ArrowRight size={17}/></button></div><div className="banner-visual"><div className="visual-ring ring-a"/><div className="visual-ring ring-b"/><Code2 size={82}/></div></div>
+         {courseSlug===DEFAULT_COURSE_SLUG&&<div className="month-section"><SectionHeading eyebrow="YOUR FIRST 30 DAYS" title="Rebuild the foundation." description="A structured first month to make your programming knowledge solid again."/><div className="month-grid">{weekOne.map(w=><div className="month-card" key={w.week}><span>WEEK {String(w.week).padStart(2,"0")}</span><h3>{w.title}</h3><p>{w.focus}</p><div><CheckCircle2 size={15}/>{w.deliverable}</div></div>)}</div></div>}
+       </motion.div>}
+       {view==="roadmap"&&<motion.div key="roadmap" {...motionProps} className="page-content">
+-        <div className="page-intro"><div className="eyebrow"><span className="eyebrow-dot"/> YOUR COMPLETE LEARNING ROADMAP</div><h1>From fundamentals <span>to mastery.</span></h1><p>Explore all {phases.length} phases, {totalTopics} curriculum topics and project milestones. Follow the sequence, or preview what lies ahead.</p></div>
++        <div className="page-intro"><div className="eyebrow"><span className="eyebrow-dot"/> YOUR COMPLETE LEARNING ROADMAP</div><h1>From fundamentals <span>to mastery.</span></h1><p>Explore all {count(phases.length, 'phase')}, {totalTopics} curriculum topics and project milestones. Follow the sequence, or preview what lies ahead.</p></div>
++        <p className="api-banner">{count(new Set(lessons.map(lesson => lesson.phaseId)).size, 'module')} with published lessons · {count(phases.filter(phase => !lessons.some(lesson => lesson.phaseId === phase.id)).length, 'outline')} only</p>
+         <div className="filter-row"><div className="search-control"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search phases, topics or projects…" aria-label="Search curriculum"/></div><div className="filter-pills">{[["all","All phases"],...Array.from(new Set(phases.map(p=>p.category))).map(key=>[key,categoryName[key]??key])].map(([key,label])=><button className={category===key?"selected":""} onClick={()=>setCategory(key)} key={key}>{label}</button>)}</div></div>
+-        <div className="roadmap-overview"><span><Layers3 size={17}/> {phases.length} phases</span><span><ListChecks size={17}/> {totalTopics} topics</span><span><Rocket size={17}/> {projects.length} projects</span><span><Clock3 size={17}/> Suggested timeframe: {course.estimated_months}</span></div>
+-        <div className="roadmap-list">{visiblePhases.length?visiblePhases.map(p=>{const Icon=icons[p.icon]??Code2;const phaseLessons=lessons.filter(l=>l.phaseId===p.id);const open=phaseOpen===p.id;return <div className={`roadmap-item ${open?"open":""}`} key={p.id}><button className="roadmap-toggle" onClick={()=>setPhaseOpen(open?null:p.id)} aria-expanded={open}><div className="roadmap-count">{String(p.id).padStart(2,"0")}</div><div className={`roadmap-icon icon-${p.category}`}><Icon size={24}/></div><div className="roadmap-title"><div className="phase-category">{categoryName[p.category]??p.category} · {p.duration} weeks</div><h3>{p.name}</h3><p>{p.desc}</p></div><div className="roadmap-toggle-end"><Chip variant={phaseLessons.length?"green":"muted"}>{p.progress?.status==="locked"?"Locked":p.progress?.status==="completed"?"Module complete":phaseLessons.length?`${phaseLessons.length} lessons live`:"Syllabus ready"}</Chip><ChevronDown className={open?"rotated":""} size={20}/></div></button>{open&&<div className="roadmap-details"><div className="roadmap-columns"><div><h4><BookOpen size={17}/> Course syllabus</h4><ol className="topic-list">{p.topics.map((topic,i)=><li key={i}><span>{String(i+1).padStart(2,"0")}</span>{topic}</li>)}</ol></div><div className="roadmap-sidebar"><div className="project-milestone"><Rocket size={21}/><span>END-OF-MODULE PROJECT</span>
++        <div className="roadmap-overview"><span><Layers3 size={17}/> {count(phases.length, 'phase')}</span><span><ListChecks size={17}/> {count(totalTopics, 'topic')}</span><span><Rocket size={17}/> {count(projects.length, 'project')}</span><span><Clock3 size={17}/> Suggested timeframe: {timeframe(course.estimated_months)}</span></div>
++        <div className="roadmap-list">{visiblePhases.length?visiblePhases.map(p=>{const Icon=icons[p.icon]??Code2;const phaseLessons=lessons.filter(l=>l.phaseId===p.id);const open=phaseOpen===p.id;return <div className={`roadmap-item ${open?"open":""}`} key={p.id}><button className="roadmap-toggle" onClick={()=>setPhaseOpen(open?null:p.id)} aria-expanded={open}><div className="roadmap-count">{String(p.id).padStart(2,"0")}</div><div className={`roadmap-icon icon-${p.category}`}><Icon size={24}/></div><div className="roadmap-title"><div className="phase-category">{categoryName[p.category]??p.category} · {count(p.duration, 'week')}</div><h3>{p.name}</h3><p>{p.desc}</p></div><div className="roadmap-toggle-end"><Chip variant={phaseLessons.length?"green":"muted"}>{phaseLessons.length === 0 ? "Outline only" : p.progress?.status==="locked"?"Locked":p.progress?.status==="completed"?"Module complete":phaseLessons.length?`${count(phaseLessons.length, 'lesson')} live`:"Syllabus ready"}</Chip><ChevronDown className={open?"rotated":""} size={20}/></div></button>{open&&<div className="roadmap-details"><div className="roadmap-columns"><div><h4><BookOpen size={17}/> Course syllabus</h4><ol className="topic-list">{p.topics.map((topic,i)=><li key={i}><span>{String(i+1).padStart(2,"0")}</span>{topic}</li>)}</ol></div><div className="roadmap-sidebar"><div className="project-milestone"><Rocket size={21}/><span>END-OF-MODULE PROJECT</span>
+           <h4>{p.progress?.final_project?.title ?? p.project}</h4>
+           {p.progress?.final_project ? <>
+             <p>{p.progress.final_project.pass_score}% to pass · {p.progress.project_unlocked ? p.progress.final_project.status.replaceAll('_', ' ') : 'Locked'}</p>
+             {p.progress.project_unlocked && <a href={`/assignments/?assignment=${encodeURIComponent(p.progress.final_project.slug)}`}>Open project lab →</a>}
+           </> : live ? <p>Final project details will appear when published.</p>
+-          : <button onClick={()=>setProjectOpen(projects.find(x=>x.phase===p.id)?.id??null)}>View project <ArrowUpRight size={15}/></button>}
++          : p.id === 1 ? <details><summary>View project brief</summary><p>Build a command-line business expense tracker. Record an expense with an amount and category, save entries to a file, and show a spending summary when you reopen it.</p></details>
++          : <p>This milestone is outlined in the syllabus. Its detailed brief is not published in the demo.</p>}
+           </div><div className="available-lessons">{live && <button className="btn btn-outline" onClick={()=>openHub("setup",p.id)}>Getting Ready and outcomes <ArrowRight size={15}/></button>}<h4>Lessons</h4>{phaseLessons.length?phaseLessons.map(l=><button key={l.id} disabled={l.locked||busy} onClick={()=>beginLesson(l.id)}><span>{l.locked?<LockKeyhole size={15}/>:completed.includes(l.id)?<CheckCircle2 size={17}/>:<Play size={15}/>}</span>{l.title}{l.locked?" · Locked":""}<ArrowRight size={15}/></button>):<p>This phase is fully mapped. Detailed lessons will be published progressively; the syllabus is not presented as completed teaching content.</p>}</div></div></div></div>}</div>}):<div className="empty-state">No phases match that search. Try a shorter keyword.</div>}</div>
+       </motion.div>}
+       {view==="classroom"&&<motion.div key="classroom" {...motionProps} className="page-content classroom-page">
+@@ -310,7 +333,7 @@ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+         <LessonNotes collapse={Boolean(liveDetail?.id === currentLesson.id && liveDetail.guide)}><div className="lesson-objective"><Lightbulb size={20}/><p><strong>What you'll learn</strong><br/>{currentLesson.objective}</p></div>{currentLesson.sections.map((section,i)=><section className="lesson-section" key={i}><div className="lesson-section-no">0{i+1} / {String(currentLesson.sections.length).padStart(2,"0")}</div><h3>{section.heading}</h3><p>{section.body}</p>{section.code&&<CodePanel code={section.code} language={section.language||"Python"}/>} {section.note&&<div className="lesson-note"><Lightbulb size={19}/><span>{section.note}</span></div>}</section>)}</LessonNotes><div className="challenge-box"><div className="challenge-kicker"><Zap size={18}/> YOUR INDEPENDENT CHALLENGE</div><h3>Now it's your turn.</h3><p>{currentLesson.challenge}</p><label htmlFor="reflection">Your notes / approach</label><textarea id="reflection" value={saved.notes[currentLesson.id]??""} onChange={e=>setSaved(old=>({...old,notes:{...old.notes,[currentLesson.id]:e.target.value}}))} placeholder="Write down your approach or what you learned… (saved automatically in this browser)" rows={4}/><small>Use the practice studio above or your local IDE to run code. This notes area does not execute code.</small></div>
+         {live && selected && <FormativePanel key={selected.id} lesson={selected.id} stage="after" />}
+         {liveDetail?.id === currentLesson.id && <ResourceLinks links={liveDetail.resources} />}
+-        {quiz.length>0&&<section className="quiz-block" id="lesson-quiz"><div className="quiz-title"><div><span className="eyebrow"><span className="eyebrow-dot"/> KNOWLEDGE CHECK</span><h3>Test your understanding</h3><p>Answer {quiz.length} questions. Aim for at least {passingScore}/{quiz.length} to complete this lesson.</p></div><div className="quiz-illustration"><ClipboardCheck size={30}/></div></div>{quiz.map((q,i)=><div key={i} className="quiz-question"><h4><span>{String(i+1).padStart(2,"0")}</span>{q.question}</h4><div className="quiz-options">{q.answers.map((answer,j)=><button key={j} disabled={quizSubmitted||busy||!canSubmit} className={`quiz-option ${quizAnswers[i]===j?"chosen":""} ${!live&&quizSubmitted&&j===q.correct?"correct":""} ${!live&&quizSubmitted&&quizAnswers[i]===j&&j!==q.correct?"incorrect":""}`} onClick={()=>setQuizAnswers(a=>({...a,[i]:j}))}><span className="option-circle">{String.fromCharCode(65+j)}</span>{answer}{!live&&quizSubmitted&&j===q.correct&&<CheckCircle2 size={17}/>}</button>)}</div>{!live&&quizSubmitted&&<div className="quiz-explanation"><Lightbulb size={16}/>{q.reason}</div>}</div>)}<div className="quiz-footer">
++        {quiz.length>0&&<section className="quiz-block" id="lesson-quiz"><div className="quiz-title"><div><span className="eyebrow"><span className="eyebrow-dot"/> KNOWLEDGE CHECK</span><h3>Test your understanding</h3><p>Answer {count(quiz.length, 'question')}. Aim for at least {passingScore}/{quiz.length} to complete this lesson.</p></div><div className="quiz-illustration"><ClipboardCheck size={30}/></div></div>{quiz.map((q,i)=><div key={i} className="quiz-question"><h4><span>{String(i+1).padStart(2,"0")}</span>{q.question}</h4><div className="quiz-options">{q.answers.map((answer,j)=><button key={j} disabled={quizSubmitted||busy||!canSubmit} className={`quiz-option ${quizAnswers[i]===j?"chosen":""} ${!live&&quizSubmitted&&j===q.correct?"correct":""} ${!live&&quizSubmitted&&quizAnswers[i]===j&&j!==q.correct?"incorrect":""}`} onClick={()=>setQuizAnswers(a=>({...a,[i]:j}))}><span className="option-circle">{String.fromCharCode(65+j)}</span>{answer}{!live&&quizSubmitted&&j===q.correct&&<CheckCircle2 size={17}/>}</button>)}</div>{!live&&quizSubmitted&&<div className="quiz-explanation"><Lightbulb size={16}/>{q.reason}</div>}</div>)}<div className="quiz-footer">
+           {live && result ? <div className="quiz-result" role="status">
+             <Trophy size={23}/> Score <strong>{result.raw_score}%</strong>
+             <span>{result.status === 'passed' ? 'Knowledge check passed!' : 'Review the lesson and try again.'}</span>
+@@ -331,7 +354,13 @@ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+         </div>
+         </div></article>}</div>
+       </motion.div>}
+-      {view==="projects"&&<motion.div key="projects" {...motionProps} className="page-content"><div className="page-intro"><div className="eyebrow"><span className="eyebrow-dot"/> THE PROJECT LAB</div><h1>Don't just learn it. <span>Build it.</span></h1><p>Real-world milestones, designed to become your engineering portfolio — and potentially SAIRE-Linked products.</p></div><div className="filter-row"><div className="search-control"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search projects or technologies…" aria-label="Search projects"/></div><Chip variant="green">{projects.length} PROJECT MILESTONES</Chip>{live&&<a className="btn btn-primary" href="/assignments/">Open ProofLoop lab <ArrowRight size={16}/></a>}</div><div className="projects-grid">{visibleProjects.map((project,i)=><button className="project-card" key={project.id} disabled={project.locked} onClick={()=>setProjectOpen(project.id)}><div className={`project-visual visual-${project.phase%4}`}><span className="project-visual-num">{String(project.phase).padStart(2,"0")}</span><div className="project-visual-shape"><Code2 size={39}/></div><span className="project-visual-tag">PHASE {String(project.phase).padStart(2,"0")}</span></div><div className="project-card-body"><div className="project-card-top"><Chip>{project.locked?"Locked":project.level}</Chip><ArrowUpRight size={18}/></div><h3>{project.name}</h3><p>{project.locked?"Complete the required lessons and modules to unlock.":project.description}</p><div className="skill-tags">{project.skills.map(s=><span key={s}>{s}</span>)}</div></div></button>)}{!visibleProjects.length&&<div className="empty-state">No projects found.</div>}</div></motion.div>}
++      {view==="projects"&&<motion.div key="projects" {...motionProps} className="page-content"><div className="page-intro"><div className="eyebrow"><span className="eyebrow-dot"/> THE PROJECT LAB</div><h1>{live ? 'Course projects' : 'Sample project lab'}</h1><p>Real-world milestones, designed to become your engineering portfolio — and potentially SAIRE-Linked products.</p></div><div className="filter-row"><div className="search-control"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search projects or technologies…" aria-label="Search projects"/></div><Chip variant="green">{projects.length} PROJECT MILESTONES</Chip>{live&&<a className="btn btn-primary" href="/assignments/">Open ProofLoop lab <ArrowRight size={16}/></a>}</div>{live && <section className="workspace-panel"><h2>Assessed final projects</h2>
++        {phases.some(phase => phase.progress?.final_project) ? <ul>{phases.map(phase => {
++          const final = phase.progress?.final_project;
++          return final && <li key={phase.id}><strong>{final.title}</strong>{phase.progress?.project_unlocked ?
++            <a href={'/assignments/?assignment=' + encodeURIComponent(final.slug)}>Open assessed brief</a> : <span>Complete module requirements to unlock</span>}</li>;
++        })}</ul> : <p>No final project has been published for this course.</p>}</section>}
++        {live && <h2>Additional project ideas</h2>}<div className="projects-grid">{visibleProjects.map((project,i)=><button className="project-card" key={project.id} disabled={project.locked} onClick={()=>setProjectOpen(project.id)}><div className={`project-visual visual-${project.phase%4}`}><span className="project-visual-num">{String(project.phase).padStart(2,"0")}</span><div className="project-visual-shape"><Code2 size={39}/></div><span className="project-visual-tag">PHASE {String(project.phase).padStart(2,"0")}</span></div><div className="project-card-body"><div className="project-card-top"><Chip>{project.locked?"Locked":project.level}</Chip><ArrowUpRight size={18}/></div><h3>{project.name}</h3><p>{project.locked?"Complete the required lessons and modules to unlock.":project.description}</p><div className="skill-tags">{project.skills.map(s=><span key={s}>{s}</span>)}</div></div></button>)}{!visibleProjects.length&&<div className="empty-state">No projects found.</div>}</div></motion.div>}
+       {view==="planner"&&<motion.div key="planner" {...motionProps} className="page-content"><div className="page-intro"><div className="eyebrow"><span className="eyebrow-dot"/> BUILD CONSISTENCY</div><h1>Make time for <span>growth.</span></h1><p>Plan a realistic schedule around your life. Adjust the sessions and your plan will remain saved on this device.</p></div><div className="planner-grid"><div className="planner-main"><div className="planner-header"><div><h2>Weekly study planner</h2><p>A flexible plan built around focused, practical sessions.</p></div><Chip variant="blue"><CalendarDays size={13}/> MY WEEK</Chip></div><div className="planner-days">{baseSchedule.map((day,i)=><div className="planner-day" key={day.day}><div className="day-icon">{day.day}</div><div className="day-body"><div><strong>{day.full}</strong><small>{day.label}</small></div><span>{saved.minutes[i]===0?"Rest day":`${saved.minutes[i]} min`}</span><input aria-label={`${day.full} study minutes`} type="range" min="0" max="240" step="15" value={saved.minutes[i]} onChange={e=>updateMinutes(i,Number(e.target.value))} style={{background:`linear-gradient(to right, #22ce9a ${saved.minutes[i]/240*100}%, #203044 ${saved.minutes[i]/240*100}%)`}}/></div></div>)}</div><div className="planner-hint"><CircleHelp size={18}/> Consistency beats intensity. A smaller schedule you can actually maintain is better than an ambitious schedule you abandon.</div></div><div className="planner-right"><div className="hours-card"><div className="hours-card-ring"><Clock3 size={34}/></div><span>YOUR WEEKLY COMMITMENT</span><div><strong>{(weekTotal/60).toFixed(1)}</strong><em>hours / week</em></div><p>{weekTotal>=600?"A balanced pace for this programme.":weekTotal>0?"A lighter pace is fine — move according to understanding.":"Add study time to design your week."}</p></div><div className="planner-tips"><h3>Our recommended rhythm</h3><div><CheckCircle2 size={17}/> Concept before implementation</div><div><CheckCircle2 size={17}/> Code independently every week</div><div><CheckCircle2 size={17}/> Review and refactor your work</div><div><CheckCircle2 size={17}/> Build projects as you progress</div></div><div className="planner-actions"><button className="btn btn-outline" onClick={()=>{setSaved(old=>({...old,minutes:baseSchedule.map(d=>d.minutes)}));setToast("Default schedule restored.")}}>Reset schedule</button><button className="btn btn-primary" onClick={()=>setToast("Study schedule saved automatically in this browser.")}><Check size={17}/> Save my plan</button></div></div></div><div className="month-section"><SectionHeading eyebrow="MONTH ONE" title="Your first four weeks" description="The fundamentals you will rebuild before tackling more complex systems."/><div className="month-grid">{weekOne.map(w=><div className="month-card" key={w.week}><span>WEEK {String(w.week).padStart(2,"0")}</span><h3>{w.title}</h3><p>{w.focus}</p><div><CheckCircle2 size={15}/>{w.deliverable}</div></div>)}</div></div></motion.div>}
+       {view==="resources"&&<motion.div key="resources" {...motionProps} className="page-content"><div className="page-intro"><div className="eyebrow"><span className="eyebrow-dot"/> YOUR ENGINEERING TOOLKIT</div><h1>Learn from the <span>best sources.</span></h1><p>Our guided tutorials are the core. Trusted documentation and courses deepen your understanding as you grow.</p></div><SectionHeading eyebrow="CORE TECHNOLOGY STACK" title="Tools you'll learn to master" description="A carefully selected stack — depth before endless framework hopping."/><div className="tech-grid">{stack.map(s=><div className="tech-card" key={s.tag}><span className="tech-num">{s.tag}</span><span className="tech-tag">{s.role}</span><h3>{s.title}</h3><p>{s.description}</p></div>)}</div><div className="resource-heading"><SectionHeading eyebrow="OFFICIAL RESOURCES" title="Recommended learning library" description="Reliable places to expand your knowledge alongside our lessons."/></div><div className="resources-grid">{resources.map(r=><a href={r.url} target="_blank" rel="noreferrer" className="resource-card" key={r.name}><div className="resource-icon"><BookOpen size={24}/></div><span>{r.category}</span><h3>{r.name}</h3><div>Explore resource <ArrowUpRight size={17}/></div></a>)}</div><div className="manifesto"><img className="manifesto-logo" src="/brand/saire-horizontal.webp" alt="SAIRE-Linked horizontal brand logo"/><div className="eyebrow">OUR LEARNING PHILOSOPHY</div><h2>Understanding before automation.</h2><p>Learn the logic behind tools. Practice without copying. Ask why a system works, how it breaks, and what makes it trustworthy. Then build things that matter.</p><button className="btn btn-primary" onClick={()=>beginLesson()}>Start with Lesson 1 <ArrowRight size={16}/></button></div></motion.div>}
+     </AnimatePresence></main>
+diff --git a/components/LiveLearningPlatform.tsx b/components/LiveLearningPlatform.tsx
+index 327a71530390332c894abc075378a60a2d08f29c..d7874f6e440e0a6a86a4d81f69b415c158639f23 100644
+--- a/components/LiveLearningPlatform.tsx
++++ b/components/LiveLearningPlatform.tsx
+@@ -1,6 +1,7 @@
+ 'use client';
+ 
+ import { useCallback, useEffect, useRef, useState } from 'react';
++import { dashboardDestination } from '@/lib/academy-display';
+ import { api, ApiError } from '@/lib/session-api';
+ import type { CourseDetails, CourseSummary } from '@/lib/lms-api';
+ import LearningPlatform from './LearningPlatform';
+@@ -19,6 +20,7 @@ type Account = {
+   username: string;
+   admin: boolean;
+   iterations: Record<string, Iteration>;
++  projects: {assignment: string; due_at: string; submissions: {id: number}[]}[];
+   quote: string;
+   orientation: {version: string; acknowledged: boolean};
+ };
+@@ -70,7 +72,8 @@ export default function LiveLearningPlatform() {
+     } catch (cause) {
+       if (version !== requestVersion.current) return;
+       if (cause instanceof ApiError && (cause.status === 401 || cause.status === 403)) {
+-        window.location.replace('/');
++        const next = dashboardDestination(window.location.pathname + window.location.search + window.location.hash);
++        window.location.replace('/?next=' + encodeURIComponent(next) + '#signin');
+         return;
+       }
+       setError(cause instanceof Error ? cause.message : 'The Academy could not load.');
+@@ -110,5 +113,11 @@ export default function LiveLearningPlatform() {
+     );
+   }
+ 
+-  return <LearningPlatform key={state.course.slug} live={{ ...state, selectCourse: setSlug, refresh, signOut, refreshError: error }} />;
++  return <LearningPlatform key={state.course.slug} live={{ ...state, selectCourse: next => {
++    const url = new URL(window.location.href);
++    url.searchParams.set("course", next);
++    url.searchParams.delete("lesson");
++    window.history.replaceState(window.history.state, "", url);
++    setSlug(next);
++  }, refresh, signOut, refreshError: error }} />;
+ }
+diff --git a/docs/V11_DEVELOPMENT.md b/docs/V11_DEVELOPMENT.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69bbc76d45f844ac09cca5e840e11e47d1c8af6
+--- /dev/null
++++ b/docs/V11_DEVELOPMENT.md
+@@ -0,0 +1,70 @@
++# SAIRE Academy V11 development notes
++
++24 November 2026 · Based on the local v10.6 working tree
++
++## Release scope
++
++V11 updates the Next.js learner experience and two read APIs in Django. The public demo, assessed classroom, project submissions, instructor reviews, and Learning Twin continue to use their respective data sources. The 2D campus remains an optional future feature.
++
++## From walkthrough to implementation
++
++I reviewed the running homepage and demo at localhost:3000, then traced the dashboard route to LiveLearningPlatform and LearningPlatform. The older LearnerDashboard component is not mounted by that route. I took a working copy of the current source, including the local changes and untracked v10.6 components. Development and fixture tests used that copy.
++
++| Reported issue | V11 change |
++| --- | --- |
++| The expense tracker opened the Pocket Garden Planner | The demo roadmap opens a project-specific expense tracker outline. The garden planner stays in the sample project lab. The live project page distinguishes assessed final projects from additional ideas and uses the assessment slug for its brief. An explicitly requested locked or unavailable project no longer silently selects another project. |
++| Assignment cards omitted the number of days | The locked assignment summary includes the CMS duration. The client handles missing values from older servers. Locked records still exclude the brief and assessment questions. |
++| Signed-out roadmaps returned to the homepage without explanation | The dashboard retains its path and query, and the sign-in panel explains the return journey. Pilot, Google and GitHub links carry the validated dashboard destination. |
++| Curriculum availability was easy to miss | Pathways show published and outline counts before the filters. The dashboard and roadmap show coverage for the selected course. The published totals come from curriculum records, independently of the learner’s unlock state. |
++| Singular counts used plural nouns | Updated project, lesson, question, term, week, module and other affected labels, including the sample roadmap. |
++| The suggested timeframe had no unit | Numeric estimates and ranges display months. Existing descriptive or unit-bearing estimates retain their wording. |
++
++## Navigation and learner workspace
++
++One navigation component supplies the six agreed groups across the entry page, demo, learner workspace, pathways, and ProofLoop. Dashboard links preserve the course. The demo uses its own classroom and planner links. The existing mobile drawer and a compact menu on the public and lab pages expose the same destinations.
++
++The dashboard prioritises a current or supplementary lesson, then an unlocked unfinished lesson. New learners can open the handbook. The course panel shows passed versus published lessons, the next panel lists lesson and unsubmitted project deadlines, and the review panel links to project records. Narrow layouts move the mentor below the main workspace.
++
++The mentor panel uses the existing project conversation for an accessible, started final project. Sending a question requires an explicit action and the existing server configuration. The panel provides a study prompt when a conversation is unavailable. Learning Twin now applies project unlock rules to suggested assignments.
++
++## Verification
++
++| Check | Result |
++| --- | --- |
++| Next.js production build and TypeScript | Passed. All nine static pages generated. |
++| Django test suite | 129 tests passed on an isolated test database. |
++| Existing frontend regressions | Content and offline demo, classroom gates, Python practice protocol, session logout and cross-tab handling passed. |
++| V11 component regressions | Counts and timeframe formats, allowed return destinations, six navigation groups, sample links, orientation, supplementary deadlines, empty states and project mentor eligibility passed. |
++| Pilot sign-in | Django returned HTTP 302 to the exact requested course roadmap. The authenticated dashboard API then returned HTTP 200. |
++| Seeded curriculum and assignment responses | Computing & IT returned 4 modules with lessons and 17 outlines. AI Engineering returned 1 and 11. Locked assignment durations were 7 or 14 days as configured. |
++
++The original localhost site was available in the in-app browser. The V11 test server ran in an isolated workspace, but the browser connection timed out. Final pixel layout, mobile drawer interaction and a full signed-in browser walkthrough remain to be verified on the merged app. External OAuth callbacks, paid provider calls and external grading jobs were not exercised.
++
++## Apply the patch
++
++The patch is based on the **current local files**, including uncommitted v10.6 work. From the Academy repository, point Git at the downloaded patch.
++
++```powershell
++git apply --check "C:\path\to\SAIRE-Academy-V11.patch"
++if ($LASTEXITCODE -eq 0) {
++    git apply "C:\path\to\SAIRE-Academy-V11.patch"
++}
++```
++
++A failed preflight identifies conflicting files before applying any changes. No package installation, database migration or production seed is required for V11. Restart the frontend and backend using the existing project setup.
++
++To repeat the main release checks, run the following from the repository with its usual Node dependencies and Django environment active.
++
++```powershell
++npm run build
++npm run check:content
++node scripts/test-v11.cjs
++node scripts/test-classroom-gate.cjs
++node scripts/test-practice.cjs
++node scripts/test-browser-session.cjs
++Push-Location backend
++python manage.py test
++Pop-Location
++```
++
++For browser acceptance, follow a pathway roadmap while signed out, complete sign-in, then confirm the course and view. At desktop and mobile widths, use the Academy menu, resume a lesson, inspect a locked project, and open the mentor from an eligible project. Use a test learner for timed or graded actions.
+diff --git a/lib/academy-display.ts b/lib/academy-display.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..b2fff7f8f20077aef8e76f7c57b1b1a94a69c3cf
+--- /dev/null
++++ b/lib/academy-display.ts
+@@ -0,0 +1,22 @@
++export function count(value: number, singular: string, plural = singular + 's') {
++  return `${value} ${value === 1 ? singular : plural}`;
++}
++
++export function timeframe(value: string) {
++  const text = String(value ?? '').trim();
++  if (!text) return 'To be confirmed';
++  if (/^\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+(?:[.,]\d+)?)?$/.test(text)) {
++    return `${text} ${Number(text) === 1 ? 'month' : 'months'}`;
++  }
++  return text;
++}
++
++export function dashboardDestination(value: string | null) {
++  if (!value) return '/dashboard/';
++  try {
++    const url = new URL(value, 'https://academy.invalid');
++    if (!value.startsWith('/') || url.origin !== 'https://academy.invalid' ||
++        !['/dashboard/', '/dashboard'].includes(url.pathname)) return '/dashboard/';
++    return '/dashboard/' + url.search + url.hash;
++  } catch { return '/dashboard/'; }
++}
+diff --git a/public/preview/preview.js b/public/preview/preview.js
+index fca4a55d62bf205087a6691aadad987ea62659f7..7f2c6b6dc1a41ef4dcebc19d9885904ed65d3222 100644
+--- a/public/preview/preview.js
++++ b/public/preview/preview.js
+@@ -19,8 +19,8 @@ function current(){return lessons.find(l=>l.id===lessonId)||lessons[0]}
+ function markDone(){if(lessonId==='p1-l1'&&state.quizBest<Math.ceil(quiz.length*.75)){setToast('Pass the sample quiz before completing the sample lesson.');document.getElementById('lesson-quiz')?.scrollIntoView({behavior:'smooth'});return}if(!state.completed.includes(lessonId))state.completed.push(lessonId);save();setToast('Lesson complete! Progress saved in this browser.')}
+ function progress(){return Math.round(state.completed.length/lessons.length*100)}
+ function sidebar(){return `<aside class="sidebar ${mobileOpen?'mobile-open':''}"><div class="sidebar-top"><div class="brand"><div class="brandmark"><img src="../brand/saire-symbol.webp" alt="SAIRE-Linked logo"/></div><div class="brandname"><strong>SAIRE<span>Linked</span></strong><small>DIGITAL LEARNING</small></div></div><button class="icon-button mobile-close" data-action="close">✕</button></div><div class="sidebar-scroll"><nav><div class="nav-label">YOUR LEARNING SPACE</div>${nav.map(n=>`<button class="nav-link ${view===n?'active':''}" data-action="go" data-to="${n}"><span class="tiny-svg">${icons[n]}</span>${names[n]}${view===n?'<span class="nav-active-dot"></span>':''}</button>`).join('')}</nav><div class="sidebar-card"><div class="sidebar-card-top"><span class="pulse-dot"></span> YOUR JOURNEY</div><div class="sidebar-card-title">Build skills.<br/><em>Build the future.</em></div><div class="sidebar-progress-meta"><span>Learning progress</span><b>${progress()}%</b></div><div class="progress-track"><div class="progress-fill" style="width:${progress()}%"></div></div><div class="sidebar-card-foot">${state.completed.length} of ${lessons.length} published lessons complete</div></div><div class="sidebar-bottom-links"><a href="https://www.sairelinked.com" target="_blank" rel="noreferrer">↗ SAIRE-Linked Website</a><a href="https://www.sairelinked.com/packages/growth" target="_blank" rel="noreferrer">↗ Explore Growth Package</a></div></div><div class="sidebar-footer"><div class="avatar">SL</div><div><strong>My learning space</strong><small>Local browser profile</small></div><span class="avatar-online"></span></div></aside><div class="sidebar-overlay" data-action="close"></div>`}
+-function overview(){const l=current();return `<div class="hero"><div class="hero-orb hero-orb-1"></div><div class="hero-orb hero-orb-2"></div><div class="hero-grid"></div><div class="hero-content"><span class="hero-kicker">✧ THE FUTURE IS ENGINEERED, NOT GUESSED · 2026—2027</span><h1>Build the mind.<br/><span>Engineer the future.</span></h1><p>A complete, project-based journey from programming fundamentals to production-ready AI agents. Learn deeply. Build confidently. Grow with SAIRE-Linked.</p><div class="hero-buttons">${btn('▶ '+(state.completed.length?'Continue learning':'Start learning'),'lesson')}${btn('Explore roadmap','roadmap','ghost')}</div><div class="hero-bottom"><span>✓ Practical first</span><span>✓ Real projects</span><span>✓ Career focused</span></div></div><img class="preview-logo" src="../brand/saire-pcb.webp" alt="SAIRE PCB circuit heart logo"/></div><div class="stat-grid">${[['◈','12','Learning phases','Foundation to expert path'],['▤','72','Curriculum topics',`${lessons.length} tutorials published`],['↗','12','Portfolio projects','Build real-world skills'],['◷','12–18','Month journey','Flexible, competence-led']].map(x=>`<div class="stat"><div class="stat-icon">${x[0]}</div><strong>${x[1]}</strong><span>${x[2]}</span><small>${x[3]}</small></div>`).join('')}</div><div class="split-section"><div class="section-main">${head('PICK UP WHERE YOU LEFT OFF','Your next step','Small, consistent steps lead to meaningful progress.')}<div class="continue-card"><div class="continue-icon">⌨</div><div class="continue-body">${chip('PHASE 01 · CURRENT LESSON')}<h3>${safe(l.title)}</h3><p>${safe(l.objective)}</p><div class="lesson-meta"><span>◷ ${l.minutes} min lesson</span><span>▤ ${safe(l.difficulty)}</span></div></div><button class="circle-arrow" data-action="lesson">↗</button></div></div><div class="insight-card"><div class="insight-heading">✧ THE SAIRE APPROACH</div><h3>Understand first.<br/><em>Automate second.</em></h3><p>Master the underlying logic before relying on frameworks or AI tools. Strong foundations create engineers who can design, debug and lead.</p><button data-action="planner">Plan your study week →</button></div></div>${head('THE LEARNING JOURNEY','One roadmap. Endless possibilities.','A carefully sequenced path across engineering, AI and intelligent automation.')}<div class="phase-feature-grid">${phases.slice(0,6).map(p=>`<button class="phase-feature-card" data-action="phase" data-id="${p.id}"><span class="phase-feature-no">${String(p.id).padStart(2,'0')} / 12</span><div class="phase-feature-icon icon-${p.category}">${p.id<5?'⌘':'✧'}</div><h3>${safe(p.name)}</h3><p>${safe(p.desc)}</p><span class="phase-feature-bottom">${p.duration} weeks <span>↗</span></span></button>`).join('')}</div><div class="banner-gradient"><div><span class="eyebrow">LEARN BY BUILDING</span><h2>Real projects. Real engineering.</h2><p>Turn each milestone into a practical portfolio project — from a Python expense tracker to an AI SaaS product.</p>${btn('Enter the project lab','projects','white')}</div><div class="banner-visual">⌘</div></div>${head('YOUR FIRST 30 DAYS','Rebuild the foundation.','A structured first month to make your programming knowledge solid again.')}<div class="month-grid">${weekOne.map(w=>`<div class="month-card"><span>WEEK ${String(w.week).padStart(2,'0')}</span><h3>${safe(w.title)}</h3><p>${safe(w.focus)}</p><div>✓ ${safe(w.deliverable)}</div></div>`).join('')}</div>`}
+-function roadmap(){let visible=phases.filter(p=>(category==='all'||category===p.category)&&`${p.name} ${p.desc} ${p.topics.join(' ')} ${p.project}`.toLowerCase().includes(search.toLowerCase()));return `<div class="page-intro"><div class="eyebrow"><span class="eyebrow-dot"></span>YOUR COMPLETE LEARNING ROADMAP</div><h1>From fundamentals <span>to mastery.</span></h1><p>Explore all 12 phases, 72 curriculum topics and project milestones. Follow the sequence, or preview what lies ahead.</p></div><div class="filter-row"><div class="search-control">⌕ <input id="search" placeholder="Search phases or topics…" value="${safe(search)}"/></div><div class="filter-pills">${[['all','All phases'],['foundations','Foundations'],['intelligence','AI & ML'],['agents','AI Agents']].map(([k,v])=>`<button data-action="cat" data-id="${k}" class="${category===k?'selected':''}">${v}</button>`).join('')}</div></div><div class="roadmap-overview"><span>◈ 12 phases</span><span>▤ 72 topics</span><span>↗ 12 projects</span><span>◷ 12–18 months</span></div><div class="demo-syllabus">${visible.map(p=>{const open=p.id===phaseOpen;const ls=lessons.filter(l=>l.phaseId===p.id);return `<div class="roadmap-item ${open?'open':''}"><button class="roadmap-toggle" data-action="phase" data-id="${p.id}"><div class="roadmap-count">${String(p.id).padStart(2,'0')}</div><div class="roadmap-icon icon-${p.category}">${p.id<5?'⌘':p.id<9?'✧':'◎'}</div><div class="roadmap-title"><div class="phase-category">${p.category==='foundations'?'ENGINEERING FOUNDATIONS':p.category==='intelligence'?'AI INTELLIGENCE':'AGENT ENGINEERING'} · ${p.duration} WEEKS</div><h3>${safe(p.name)}</h3><p>${safe(p.desc)}</p></div><div class="roadmap-toggle-end">${chip(ls.length?ls.length+' lessons live':'Syllabus ready',ls.length?'green':'muted')} ${open?'⌃':'⌄'}</div></button><div class="roadmap-details"><div class="roadmap-columns"><div><h4>▤ Course syllabus</h4><ol class="topic-list">${p.topics.map((t,i)=>`<li><span>${String(i+1).padStart(2,'0')}</span>${safe(t)}</li>`).join('')}</ol></div><div><div class="project-milestone"><span>END-OF-PHASE PROJECT</span><h4>${safe(p.project)}</h4><button data-action="project" data-id="${projects.find(x=>x.phase===p.id)?.id||'sample-project'}">View project ↗</button></div><div class="available-lessons"><h4>Lessons</h4>${ls.length?ls.map(l=>`<button data-action="lesson" data-id="${l.id}">▶ ${safe(l.title)} →</button>`).join(''):'<p>Complete syllabus available. Detailed tutorials for this phase will be developed progressively.</p>'}</div></div></div></div></div>`}).join('')||'<div class="empty-state">No phases matched your search.</div>'}</div>`}
++function overview(){const l=current();return `<div class="hero"><div class="hero-orb hero-orb-1"></div><div class="hero-orb hero-orb-2"></div><div class="hero-grid"></div><div class="hero-content"><span class="hero-kicker">✧ THE FUTURE IS ENGINEERED, NOT GUESSED · 2026—2027</span><h1>Build the mind.<br/><span>Engineer the future.</span></h1><p>A complete, project-based journey from programming fundamentals to production-ready AI agents. Learn deeply. Build confidently. Grow with SAIRE-Linked.</p><div class="hero-buttons">${btn('▶ '+(state.completed.length?'Continue learning':'Start learning'),'lesson')}${btn('Explore roadmap','roadmap','ghost')}</div><div class="hero-bottom"><span>✓ Practical first</span><span>✓ Real projects</span><span>✓ Career focused</span></div></div><img class="preview-logo" src="../brand/saire-pcb.webp" alt="SAIRE PCB circuit heart logo"/></div><div class="stat-grid">${[['◈','12','Learning phases','Foundation to expert path'],['▤','72','Curriculum topics',`${lessons.length} tutorial${lessons.length===1?'':'s'} published`],['↗','12','Portfolio projects','Build real-world skills'],['◷','12–18','Month journey','Flexible, competence-led']].map(x=>`<div class="stat"><div class="stat-icon">${x[0]}</div><strong>${x[1]}</strong><span>${x[2]}</span><small>${x[3]}</small></div>`).join('')}</div><div class="split-section"><div class="section-main">${head('PICK UP WHERE YOU LEFT OFF','Your next step','Small, consistent steps lead to meaningful progress.')}<div class="continue-card"><div class="continue-icon">⌨</div><div class="continue-body">${chip('PHASE 01 · CURRENT LESSON')}<h3>${safe(l.title)}</h3><p>${safe(l.objective)}</p><div class="lesson-meta"><span>◷ ${l.minutes} min lesson</span><span>▤ ${safe(l.difficulty)}</span></div></div><button class="circle-arrow" data-action="lesson">↗</button></div></div><div class="insight-card"><div class="insight-heading">✧ THE SAIRE APPROACH</div><h3>Understand first.<br/><em>Automate second.</em></h3><p>Master the underlying logic before relying on frameworks or AI tools. Strong foundations create engineers who can design, debug and lead.</p><button data-action="planner">Plan your study week →</button></div></div>${head('THE LEARNING JOURNEY','One roadmap. Endless possibilities.','A carefully sequenced path across engineering, AI and intelligent automation.')}<div class="phase-feature-grid">${phases.slice(0,6).map(p=>`<button class="phase-feature-card" data-action="phase" data-id="${p.id}"><span class="phase-feature-no">${String(p.id).padStart(2,'0')} / 12</span><div class="phase-feature-icon icon-${p.category}">${p.id<5?'⌘':'✧'}</div><h3>${safe(p.name)}</h3><p>${safe(p.desc)}</p><span class="phase-feature-bottom">${p.duration} weeks <span>↗</span></span></button>`).join('')}</div><div class="banner-gradient"><div><span class="eyebrow">LEARN BY BUILDING</span><h2>Real projects. Real engineering.</h2><p>Turn each milestone into a practical portfolio project — from a Python expense tracker to an AI SaaS product.</p>${btn('Enter the project lab','projects','white')}</div><div class="banner-visual">⌘</div></div>${head('YOUR FIRST 30 DAYS','Rebuild the foundation.','A structured first month to make your programming knowledge solid again.')}<div class="month-grid">${weekOne.map(w=>`<div class="month-card"><span>WEEK ${String(w.week).padStart(2,'0')}</span><h3>${safe(w.title)}</h3><p>${safe(w.focus)}</p><div>✓ ${safe(w.deliverable)}</div></div>`).join('')}</div>`}
++function roadmap(){let visible=phases.filter(p=>(category==='all'||category===p.category)&&`${p.name} ${p.desc} ${p.topics.join(' ')} ${p.project}`.toLowerCase().includes(search.toLowerCase()));return `<div class="page-intro"><div class="eyebrow"><span class="eyebrow-dot"></span>YOUR COMPLETE LEARNING ROADMAP</div><h1>From fundamentals <span>to mastery.</span></h1><p>Explore all 12 phases, 72 curriculum topics and project milestones. Follow the sequence, or preview what lies ahead.</p></div><div class="filter-row"><div class="search-control">⌕ <input id="search" placeholder="Search phases or topics…" value="${safe(search)}"/></div><div class="filter-pills">${[['all','All phases'],['foundations','Foundations'],['intelligence','AI & ML'],['agents','AI Agents']].map(([k,v])=>`<button data-action="cat" data-id="${k}" class="${category===k?'selected':''}">${v}</button>`).join('')}</div></div><div class="roadmap-overview"><span>◈ 12 phases</span><span>▤ 72 topics</span><span>↗ ${projects.length} sample project${projects.length===1?'':'s'}</span><span>◷ 12–18 months</span></div><div class="demo-syllabus">${visible.map(p=>{const open=p.id===phaseOpen;const ls=lessons.filter(l=>l.phaseId===p.id);return `<div class="roadmap-item ${open?'open':''}"><button class="roadmap-toggle" data-action="phase" data-id="${p.id}"><div class="roadmap-count">${String(p.id).padStart(2,'0')}</div><div class="roadmap-icon icon-${p.category}">${p.id<5?'⌘':p.id<9?'✧':'◎'}</div><div class="roadmap-title"><div class="phase-category">${p.category==='foundations'?'ENGINEERING FOUNDATIONS':p.category==='intelligence'?'AI INTELLIGENCE':'AGENT ENGINEERING'} · ${p.duration} WEEKS</div><h3>${safe(p.name)}</h3><p>${safe(p.desc)}</p></div><div class="roadmap-toggle-end">${chip(ls.length?ls.length+(ls.length===1?' lesson live':' lessons live'):'Syllabus ready',ls.length?'green':'muted')} ${open?'⌃':'⌄'}</div></button><div class="roadmap-details"><div class="roadmap-columns"><div><h4>▤ Course syllabus</h4><ol class="topic-list">${p.topics.map((t,i)=>`<li><span>${String(i+1).padStart(2,'0')}</span>${safe(t)}</li>`).join('')}</ol></div><div><div class="project-milestone"><span>END-OF-PHASE PROJECT</span><h4>${safe(p.project)}</h4>${p.id===1 ? '<details><summary>View project brief</summary><p>Build a command-line business expense tracker. Record an amount and category, save entries to a file, and show a spending summary.</p></details>' : '<p>Detailed brief pending.</p>'}</div><div class="available-lessons"><h4>Lessons</h4>${ls.length?ls.map(l=>`<button data-action="lesson" data-id="${l.id}">▶ ${safe(l.title)} →</button>`).join(''):'<p>Complete syllabus available. Detailed tutorials for this phase will be developed progressively.</p>'}</div></div></div></div></div>`}).join('')||'<div class="empty-state">No phases matched your search.</div>'}</div>`}
+ function codeSection(code){return `<div class="code-panel"><div class="code-header"><span class="code-dots"><i></i><i></i><i></i></span> Python · main.py <button class="copy-btn" data-action="copy" data-code="${safe(code)}">Copy</button></div><pre><code>${safe(code)}</code></pre></div>`}
+ function classroom(){const l=current();return `<div class="page-intro"><div class="eyebrow"><span class="eyebrow-dot"></span>INTERACTIVE CLASSROOM</div><h1>Learn with <span>purpose.</span></h1><p>Read, experiment, review and apply. Your learning journey starts with real understanding.</p></div><div class="classroom-layout"><aside class="lesson-sidebar"><div class="lesson-sidebar-heading">▤ Available lessons ${chip(lessons.length+' LIVE')}</div><div class="lesson-phase-label">PHASE 01 — PROGRAMMING</div>${lessons.map((x,i)=>`<button class="lesson-tab ${x.id===lessonId?'selected':''}" data-action="lesson" data-id="${x.id}"><span class="lesson-number ${state.completed.includes(x.id)?'completed':''}">${state.completed.includes(x.id)?'✓':String(i+1).padStart(2,'0')}</span><span><strong>${safe(x.title)}</strong><small>◷ ${x.minutes} min</small></span><span>›</span></button>`).join('')}<div class="lesson-sidebar-foot">✧ <p>Additional tutorials will be developed progressively. The complete 12-phase syllabus is available now.</p></div></aside><article class="lesson-article"><div class="lesson-art"><div class="lesson-art-label">${chip('PHASE 01 / LESSON '+(lessons.indexOf(l)+1))}<h2>${safe(l.title)}</h2><p>${safe(l.objective)}</p><div>◷ ${l.minutes} MIN · PYTHON FUNDAMENTALS</div></div><div class="lesson-art-icon">⌘</div></div><div class="lesson-article-inner"><div class="lesson-objective"><span>✧</span><p><strong>What you'll learn</strong><br/>${safe(l.objective)}</p></div>${l.sections.map((s,i)=>`<section class="lesson-section"><div class="lesson-section-no">0${i+1} / 0${l.sections.length}</div><h3>${safe(s.heading)}</h3><p>${safe(s.body)}</p>${s.code?codeSection(s.code):''}${s.note?`<div class="lesson-note">✧ ${safe(s.note)}</div>`:''}</section>`).join('')}<div class="challenge-box"><div class="challenge-kicker">✧ YOUR INDEPENDENT CHALLENGE</div><h3>Now it's your turn.</h3><p>${safe(l.challenge)}</p><label for="notes">Your notes / approach</label><textarea id="notes" rows="4" placeholder="Write your approach or lessons learned…">${safe(state.notes[l.id]||'')}</textarea><small>Your notes save automatically on this device. Practice Python in your editor; this isn't a code execution environment.</small></div>${l.id==='p1-l1'?questionnaire():''}<div class="lesson-finish"><div><strong>${state.completed.includes(l.id)?'Lesson completed!':'Ready to move forward?'}</strong><p>Practice independently and review the ideas before continuing.</p></div><div class="lesson-finish-actions">${btn('View roadmap','roadmap','outline')}${state.completed.includes(l.id)?btn('Next lesson','next'):btn('Mark complete','finish')}</div></div></div></article></div>`}
+ function questionnaire(){let score=quiz.filter((q,i)=>answers[i]===q.correct).length;return `<div class="quiz-block" id="lesson-quiz"><div class="quiz-title"><div><div class="eyebrow">KNOWLEDGE CHECK</div><h3>Test your understanding</h3><p>Ungraded sample knowledge check.</p></div><div class="quiz-illustration">✓</div></div>${quiz.map((q,i)=>`<div class="demo-question"><h4>${i+1}. ${safe(q.question)}</h4><div class="demo-answers">${q.answers.map((a,j)=>`<button ${submitted?'disabled':''} data-action="answer" data-q="${i}" data-a="${j}" class="${answers[i]===j?'selected':''} ${submitted&&j===q.correct?'correct':''} ${submitted&&answers[i]===j&&j!==q.correct?'wrong':''}">${String.fromCharCode(65+j)} · ${safe(a)}</button>`).join('')}</div>${submitted?`<span class="demo-answer">${answers[i]===q.correct?'✓ Correct!':'Review: '+safe(q.answers[q.correct])}. ${safe(q.reason)}</span>`:''}</div>`).join('')}<div class="quiz-footer">${submitted?`<div class="quiz-result">★ Score: <strong>${score}/${quiz.length}</strong> ${score>=Math.ceil(quiz.length*.75)?'Knowledge check passed!':'Review and try again.'}</div>${btn('Retake quiz','retake','outline')}`:`<span>${Object.keys(answers).length}/${quiz.length} answered</span><button class="btn btn-primary" data-action="submit" ${Object.keys(answers).length===quiz.length?'':'disabled'}>Check my answers →</button>`}</div></div>`}
+diff --git a/scripts/check-project.cjs b/scripts/check-project.cjs
+index 5e207fd10c6b3220e490f251c9af5833b02bf38d..e81d0be9420d94815c33b54ebab3f9ac092b27e5 100644
+--- a/scripts/check-project.cjs
++++ b/scripts/check-project.cjs
+@@ -22,6 +22,8 @@ vm.runInNewContext(script,{window,document,localStorage,setTimeout(){},console,B
+ assert.ok(root.innerHTML.includes('Engineer the future.'));
+ const makeClick=(action,more={})=>({target:{closest(){return {dataset:{action,...more}}}}});
+ root.onclick(makeClick('roadmap'));assert.ok(root.innerHTML.includes('Programming Fundamentals'));
++assert.ok(root.innerHTML.includes('View project brief') && root.innerHTML.includes('command-line business expense tracker'));
++assert.ok(!root.innerHTML.includes('data-action="project" data-id="sample-project"'), 'Roadmap must not open an unrelated sample');
+ root.onclick(makeClick('go',{to:'classroom'}));assert.ok(root.innerHTML.includes('Make a learning promise'));
+ root.onclick(makeClick('projects'));assert.ok(root.innerHTML.includes('Pocket Garden Planner'));
+ root.onclick(makeClick('planner'));assert.ok(root.innerHTML.includes('Weekly study planner'));
+diff --git a/scripts/test-v11.cjs b/scripts/test-v11.cjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..1c7f8410cb41ee06d12dcd2e7f24433a73d9804d
+--- /dev/null
++++ b/scripts/test-v11.cjs
+@@ -0,0 +1,65 @@
++// Run in a separate Node process so the TypeScript loader is scoped to this test.
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const Module = require('node:module');
++const React = require('react');
++const {renderToStaticMarkup} = require('react-dom/server');
++const ts = require('typescript');
++const root = path.resolve(__dirname, '..');
++const resolve = Module._resolveFilename;
++Module._resolveFilename = function(name, ...args) {
++  return resolve.call(this, name.startsWith('@/') ? path.join(root, name.slice(2)) : name, ...args);
++};
++for (const extension of ['.ts', '.tsx']) {
++  require.extensions[extension] = (module, filename) => {
++    const source = fs.readFileSync(filename, 'utf8');
++    const compiled = ts.transpileModule(source, {compilerOptions: {
++      target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
++    }});
++    module._compile(compiled.outputText, filename);
++  };
++}
++const {count, timeframe, dashboardDestination} = require('../lib/academy-display');
++const Nav = require('../components/AcademyNavigation').default;
++const Workspace = require('../components/DashboardWorkspace').default;
++const render = (component, props) => renderToStaticMarkup(React.createElement(component, props));
++assert.equal(count(0, 'question'), '0 questions');
++assert.equal(count(1, 'lesson'), '1 lesson');
++assert.equal(count(2, 'project'), '2 projects');
++for (const [input, result] of [['12–18', '12–18 months'], ['12-18', '12-18 months'], ['1', '1 month'], ['2 months', '2 months'], ['', 'To be confirmed']]) {
++  assert.equal(timeframe(input), result);
++}
++const requested = '/dashboard/?course=python&view=roadmap#module-2';
++assert.equal(dashboardDestination(requested), requested);
++for (const value of [null, 'https://outside.invalid/dashboard/', '//outside.invalid/dashboard/', '/accounts/login/']) {
++  assert.equal(dashboardDestination(value), '/dashboard/');
++}
++const navigation = render(Nav, {course: 'python', active: 'roadmap'});
++for (const title of ['Workspace', 'Smart Classroom', 'Engineering Lab', 'ProofLoop Centre', 'Learning Twin', 'Support']) assert.ok(navigation.includes(title));
++assert.match(navigation, /view=roadmap&amp;course=python" aria-current="page"/);
++assert.match(render(Nav, {compact:true}), /<summary>Academy menu/);
++assert.match(render(Nav, {demo:true}), /\/demo\/\?view=roadmap/);
++const live = {
++  username: 'Demo learner', orientation: {acknowledged:true}, projects: [],
++  iterations: {second: {status:'supplementary', due_at:'2026-11-08T12:00:00Z', supplementary_due_at:'2026-11-15T12:00:00Z'}},
++  course: {slug:'python', title:'Programming foundations', estimated_months:'1', phases:[{id:1},{id:2}],
++    lessons:[{id:'first', title:'First lesson', phaseId:1}, {id:'second', title:'Working with files', phaseId:1}]}
++};
++const workspace = () => render(Workspace, {live, openLesson() {}, roadmap() {}});
++assert.match(workspace(), /<h2>Working with files<\/h2>/);
++assert.match(workspace(), /Resume lesson/);
++assert.match(workspace(), /dateTime="2026-11-15T12:00:00Z"/i);
++assert.match(workspace(), /1 module with lessons · 1 outline · 1 month/);
++live.course.phases[0].progress = {project_unlocked:true, final_project:{slug:'files',title:'File index',status:'ready'}};
++live.projects = [{assignment:'files',due_at:'2026-11-23T12:00:00Z',submissions:[]}];
++assert.match(workspace(), /assignment=files#project-mentor/);
++live.course.phases[0].progress.project_unlocked = false;
++assert.doesNotMatch(workspace(), /assignment=files#project-mentor/);
++live.orientation.acknowledged = false;
++assert.match(workspace(), /Open the handbook/);
++live.orientation.acknowledged = true;
++live.course.lessons = [];
++assert.match(workspace(), /Explore your course roadmap/);
++assert.doesNotMatch(workspace(), /Resume lesson/);
++console.log('PASS: count and duration copy, return destinations, grouped navigation, and dashboard learner states.');

@@ -1,0 +1,1156 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,4 +1,6 @@
+-# SAIRE-Linked Academy / ProofLoop v10
++# SAIRE-Linked Academy / ProofLoop v10.1
++
++Use the [v10.1 upgrade guide](docs/PROOFLOOP_V10_1_ACADEMY_ENTRY.md) for the public homepage, shared sign-in design, dedicated dashboard and final-project progression rules.
+ 
+ Start with [the v10 setup and rules guide](docs/PROOFLOOP_V10_LEARNER_EXPERIENCE.md) and [verified results](docs/VALIDATION_V10.md). This guide supersedes older setup/UI claims below. The live home page requires Django; sample-only browser progress is at `/demo/`. GitHub/Google buttons require your own OAuth credentials.
+ 
+diff --git a/app/assignments/page.tsx b/app/assignments/page.tsx
+--- a/app/assignments/page.tsx
++++ b/app/assignments/page.tsx
+@@ -97,7 +97,13 @@
+   },[]);
+   useEffect(()=>{
+     let live=true;
+-    request<Assignment[]>("/assignments/",undefined,"").then(items=>{if(live){setList(items);setChosen(items.find(a=>!a.locked)?.slug??"");}})
++    request<Assignment[]>("/assignments/",undefined,"").then(items=>{if(live){setList(items);setChosen(current => {
++        const requested = new URLSearchParams(window.location.search).get("assignment");
++        const unlocked = items.filter(assignment => !assignment.locked);
++        return unlocked.find(assignment => assignment.slug === requested)?.slug
++          ?? unlocked.find(assignment => assignment.slug === current)?.slug
++          ?? unlocked[0]?.slug ?? "";
++      });}})
+       .catch(()=>{if(live)setError("Django API is offline. Start the backend to view live assignments.");});
+     return()=>{live=false;};
+   },[request]);
+@@ -227,7 +233,7 @@
+   }
+ 
+   return <main className="proofloop-page">
+-    <p><a href="/">Personal dashboard · sign in with Google or GitHub</a></p>
++    <p><a href="/dashboard/">Personal dashboard</a> · <a href="/">Sign in with Google or GitHub</a></p>
+     <div className="proofloop-back"><a href="/"><ArrowLeft size={16}/> Back to Academy</a><span>SAIRE-LINKED / PROOFLOOP v0.5</span></div>
+     <motion.header {...fade} className="proofloop-hero">
+       <div className="proofloop-hero-icon"><img src="/brand/saire-symbol.webp" alt="SAIRE-Linked Academy logo"/></div>
+diff --git a/app/dashboard/page.tsx b/app/dashboard/page.tsx
+new file mode 100644
+--- /dev/null
++++ b/app/dashboard/page.tsx
+@@ -0,0 +1,5 @@
++import LearnerDashboard from '@/components/LearnerDashboard';
++
++export default function DashboardPage() {
++  return <LearnerDashboard />;
++}
+diff --git a/app/demo/page.tsx b/app/demo/page.tsx
+--- a/app/demo/page.tsx
++++ b/app/demo/page.tsx
+@@ -1,2 +1,2 @@
+ import LearningPlatform from "@/components/LearningPlatform";
+-export default function Demo(){return <><aside style={{padding:16,background:"#ffedb8",color:"#222"}}>DEMO ONLY: sample content and local progress. <a href="/">Open your verified learner dashboard</a></aside><LearningPlatform /></>;}
++export default function Demo(){return <><aside style={{padding:16,background:"#ffedb8",color:"#222"}}>DEMO ONLY: sample content and local progress. <a href="/dashboard/">Open your verified learner dashboard</a></aside><LearningPlatform /></>;}
+diff --git a/app/learner.css b/app/learner.css
+--- a/app/learner.css
++++ b/app/learner.css
+@@ -1 +1,30 @@
+ .academy{--green:#65ecad;max-width:1180px;margin:auto;padding:28px 28px 70px;color:#e3efe9}.academy header,.academy nav,.academy-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.academy header{justify-content:space-between}.academy a{color:#8cf1c0}.academy-brand{display:flex;align-items:center;gap:12px;font-weight:800;text-decoration:none}.academy-brand img{width:44px}.academy-brand small{font-size:10px;letter-spacing:2px}.academy-hero{padding:70px 0 38px;max-width:900px}.academy h1{font-size:clamp(36px,6vw,64px);line-height:1.12;margin:18px 0}.academy p{line-height:1.7;color:#b2c6bd}.academy .eyebrow{font-size:11px;letter-spacing:3px;color:var(--green)}.academy-card{border:1px solid #25443a;background:#0b211b;border-radius:20px;padding:28px;margin:22px 0}.academy h2{font-size:24px;margin:0 0 16px}.academy h3{margin:0 0 8px}.academy button,.academy-button{border:1px solid #4ca57a;background:#153e2f;color:#9af6c7;border-radius:10px;padding:11px 17px;cursor:pointer;font:inherit;text-decoration:none}.academy button:disabled{opacity:.45;cursor:default}.academy-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.academy-stats>div{padding:24px;background:#123629;border-radius:16px}.academy-stats strong,.academy-stats span{display:block}.academy-stats strong{font-size:24px;color:var(--green)}.academy-stats span{margin-top:10px;color:#b2c6bd}.academy-roadmap{padding:0;list-style:none}.academy-roadmap li{display:flex;gap:20px;align-items:center;border-top:1px solid #25443a;padding:22px 0}.academy-roadmap li>div:nth-child(2){flex:1}.academy-roadmap p{margin:3px 0}.lesson-number{border-radius:50%;background:#16442f;color:var(--green);min-width:38px;height:38px;display:grid;place-items:center}.academy-projects{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.academy-projects article{padding:20px;border:1px solid #25443a;border-radius:12px}.academy fieldset{border:1px solid #315b48;border-radius:10px;margin:20px 0;padding:18px}.academy label{display:flex;gap:12px;padding:10px;cursor:pointer}.academy pre{overflow:auto;background:#061610;padding:20px;border-radius:12px}.academy-error{border-left:4px solid #f48d8d;padding:15px;background:#3a191f}.academy-notice{border-left:4px solid var(--green);padding:15px;background:#123629}.academy footer{padding:30px 0;font-size:13px;color:#88a899}.academy .badge{display:inline-block;padding:12px;background:#3d3714;color:#ffe496;border-radius:10px}@media(max-width:700px){.academy{padding:20px 16px}.academy-roadmap li{flex-wrap:wrap}.academy-stats{grid-template-columns:1fr}.academy-card{padding:20px}}
++
++.academy-module {
++  padding: 24px 0;
++  border-top: 1px solid #25443a;
++}
++.academy-module-heading {
++  display: flex;
++  align-items: baseline;
++  justify-content: space-between;
++  gap: 12px;
++  flex-wrap: wrap;
++}
++.academy-module-status {
++  padding: 4px 10px;
++  border-radius: 8px;
++  background: #163a2e;
++  color: #a4f3ce;
++  font-size: .85rem;
++}
++.academy-module h4 { margin: 0 0 5px; }
++.academy-module details { margin: 12px 0; }
++.academy-module summary { cursor: pointer; color: #a4f3ce; }
++.academy-capstone {
++  background: #123126;
++  border-radius: 12px;
++  padding: 16px;
++  margin-top: 12px;
++}
++#active-lesson { scroll-margin-top: 20px; }
+diff --git a/app/page.tsx b/app/page.tsx
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -1,2 +1,30 @@
+-import LearnerDashboard from '@/components/LearnerDashboard';
+-export default function Home(){return <LearnerDashboard/>;}
++import AcademySignIn from '@/components/AcademySignIn';
++import '@/public/academy-auth.css';
++
++export default function Home() {
++  return (
++    <main className="academy-entry">
++      <header className="entry-header">
++        <a className="entry-brand" href="/">
++          <img src="/brand/saire-symbol.webp" alt="" />
++          <span>SAIRE-Linked Academy</span>
++        </a>
++        <a href="/demo/">Explore the demo</a>
++      </header>
++      <section className="entry-hero" aria-labelledby="academy-title">
++        <div className="entry-intro">
++          <p className="entry-eyebrow">ENGINEERING LEARNING PLATFORM</p>
++          <h1 id="academy-title">Learn AI engineering by building real projects.</h1>
++          <p>SAIRE-Linked Academy takes you from programming foundations to AI and agentic systems. Follow a structured roadmap, practise with hands-on lessons, and prove what you can build through reviewed projects.</p>
++          <dl className="entry-steps">
++            <div><dt>Learn</dt><dd>Work through guided lessons in order.</dd></div>
++            <div><dt>Build</dt><dd>Apply what you learn to a module project.</dd></div>
++            <div><dt>Advance</dt><dd>Pass the project to unlock the next module.</dd></div>
++          </dl>
++        </div>
++        <AcademySignIn />
++      </section>
++      <footer>SAIRE-Linked Academy · Powered by ProofLoop</footer>
++    </main>
++  );
++}
+diff --git a/backend/assessments/admin.py b/backend/assessments/admin.py
+--- a/backend/assessments/admin.py
++++ b/backend/assessments/admin.py
+@@ -13,7 +13,7 @@
+     autocomplete_fields = ('module', 'project')
+     readonly_fields = ('created_at',)
+     fieldsets = [
+-        ('Curriculum', {'fields': ('module', 'project', 'slug', 'title', 'brief', 'learning_outcomes', 'published')}),
++        ('Curriculum', {'fields': ('module', 'project', 'slug', 'title', 'brief', 'learning_outcomes', 'published', 'module_pass_score')}),
+         ('Starter and assessment', {'fields': ('starter_bundle', 'template_url', 'test_command', 'duration_days', 'late_penalty_per_day')}),
+         ('Code defence (5 questions)', {'fields': ('q1', 'q2', 'q3', 'q4', 'q5')}),
+         ('Metadata', {'fields': ('created_at',)}),
+diff --git a/backend/assessments/management/commands/seed_proofloop.py b/backend/assessments/management/commands/seed_proofloop.py
+--- a/backend/assessments/management/commands/seed_proofloop.py
++++ b/backend/assessments/management/commands/seed_proofloop.py
+@@ -24,7 +24,7 @@
+                 'module': module, 'title': 'SAIRE Quotation Engine',
+                 'brief': 'Build a reusable Python quotation calculator for a digital services company. Validate inputs, use Decimal arithmetic, write regression tests, and explain your implementation.',
+                 'learning_outcomes': 'Write reusable Python functions\nValidate user and financial inputs\nUse Decimal for money\nWrite independent unit tests\nExplain design trade-offs',
+-                'duration_days': 7, 'published': True,
++                'duration_days': 7, 'published': True, 'module_pass_score': 70,
+                 'q1': 'Why is Decimal preferable to float for monetary values?',
+                 'q2': 'How does your implementation reject invalid input?',
+                 'q3': 'How did you break the problem into separate functions?',
+diff --git a/backend/assessments/migrations/0003_module_final_project.py b/backend/assessments/migrations/0003_module_final_project.py
+new file mode 100644
+--- /dev/null
++++ b/backend/assessments/migrations/0003_module_final_project.py
+@@ -0,0 +1,58 @@
++# Generated by Django 5.2.18 on 2026-11-05 11:43
++
++import django.core.validators
++from django.db import migrations, models
++
++
++def designate_seeded_project(apps, schema_editor):
++    Assignment = apps.get_model('assessments', 'Assignment')
++    Assignment.objects.using(schema_editor.connection.alias).filter(
++        slug='saire-quotation-engine',
++        module__course__slug='ai-engineer-agentic-systems',
++        module__position=1,
++        module_pass_score__isnull=True,
++    ).update(module_pass_score=70)
++
++
++class Migration(migrations.Migration):
++
++    dependencies = [
++        ("assessments", "0002_gradingjob"),
++        ("courses", "0001_initial"),
++    ]
++
++    operations = [
++        migrations.AddField(
++            model_name="assignment",
++            name="module_pass_score",
++            field=models.PositiveSmallIntegerField(
++                blank=True,
++                help_text="Set a percentage to designate this as the final project for its module.",
++                null=True,
++                validators=[
++                    django.core.validators.MinValueValidator(1),
++                    django.core.validators.MaxValueValidator(100),
++                ],
++            ),
++        ),
++        migrations.AddConstraint(
++            model_name="assignment",
++            constraint=models.UniqueConstraint(
++                condition=models.Q(("module_pass_score__isnull", False)),
++                fields=("module",),
++                name="one_final_assignment_per_module",
++            ),
++        ),
++        migrations.AddConstraint(
++            model_name="assignment",
++            constraint=models.CheckConstraint(
++                condition=models.Q(
++                    ("module_pass_score__isnull", True),
++                    ("module_pass_score__range", (1, 100)),
++                    _connector="OR",
++                ),
++                name="valid_module_pass_score",
++            ),
++        ),
++        migrations.RunPython(designate_seeded_project, migrations.RunPython.noop),
++    ]
+diff --git a/backend/assessments/models.py b/backend/assessments/models.py
+--- a/backend/assessments/models.py
++++ b/backend/assessments/models.py
+@@ -28,10 +28,25 @@
+     q4 = models.CharField(max_length=400)
+     q5 = models.CharField(max_length=400)
+     published = models.BooleanField(default=False)
++    module_pass_score = models.PositiveSmallIntegerField(
++        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(100)],
++        help_text='Set a percentage to designate this as the final project for its module.',
++    )
+     created_at = models.DateTimeField(auto_now_add=True)
+ 
+     class Meta:
+         ordering = ('module__position', 'title')
++        constraints = [
++            models.UniqueConstraint(
++                fields=['module'], condition=models.Q(module_pass_score__isnull=False),
++                name='one_final_assignment_per_module',
++            ),
++            models.CheckConstraint(
++                condition=models.Q(module_pass_score__isnull=True) |
++                models.Q(module_pass_score__range=(1, 100)),
++                name='valid_module_pass_score',
++            ),
++        ]
+ 
+     def __str__(self):
+         return self.title
+diff --git a/backend/config/settings.py b/backend/config/settings.py
+--- a/backend/config/settings.py
++++ b/backend/config/settings.py
+@@ -39,7 +39,7 @@
+ ROOT_URLCONF = "config.urls"
+ TEMPLATES = [{
+     "BACKEND": "django.template.backends.django.DjangoTemplates",
+-    "DIRS": [], "APP_DIRS": True,
++    "DIRS": [BASE_DIR / "templates"], "APP_DIRS": True,
+     "OPTIONS": {"context_processors": [
+         "django.template.context_processors.debug",
+         "django.template.context_processors.request",
+@@ -91,7 +91,7 @@
+ 
+ # v10: same-origin browser sessions; TokenAuthentication remains available for CLI.
+ AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend', 'allauth.account.auth_backends.AuthenticationBackend']
+-LOGIN_REDIRECT_URL = '/'
++LOGIN_REDIRECT_URL = '/dashboard/'
+ ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+ ACCOUNT_EMAIL_VERIFICATION = 'none'
+ ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+diff --git a/backend/courses/serializers.py b/backend/courses/serializers.py
+--- a/backend/courses/serializers.py
++++ b/backend/courses/serializers.py
+@@ -21,24 +21,36 @@
+ 
+ def course_payload(course, user=None):
+     from django.contrib.auth.models import AnonymousUser
+-    from progression.services import can_access, module_access, admin_access
++    from progression.services import course_progress, admin_access
+     user = user or AnonymousUser()
++    is_admin = admin_access(user)
++    states, accessible_lessons = course_progress(user, course.pk)
+     phases, lessons, projects = [], [], []
+     for module in course.modules.all():
+-        if not module.published and not admin_access(user):
++        if not module.published and not is_admin:
+             continue
++        progress = states.get(module.pk, {})
++        final_project = progress.get('final_project')
++        if is_admin:
++            final = module.assignments.filter(module_pass_score__isnull=False).first()
++            if final and not final_project:
++                final_project = {'slug': final.slug, 'title': final.title,
++                                 'pass_score': final.module_pass_score, 'status': 'ready'}
+         phases.append({'id': module.position, 'name': module.name, 'duration': module.duration_weeks,
+             'category': module.category, 'desc': module.description, 'icon': module.icon,
+-            'topics': [t.text for t in module.topics.all()], 'project': 'Module milestone'})
++            'topics': [t.text for t in module.topics.all()], 'project': 'Module milestone',
++            'progress': {**progress, 'status': 'admin_preview' if is_admin else progress['status'],
++                         'project_unlocked': is_admin or progress.get('project_unlocked', False),
++                         'final_project': final_project}})
+         for lesson in module.lessons.all():
+-            if not lesson.published and not admin_access(user):
++            if not lesson.published and not is_admin:
+                 continue
+             lessons.append({'id': lesson.public_id, 'phaseId': module.position, 'title': lesson.title,
+-                'minutes': lesson.minutes, 'difficulty': lesson.difficulty, 'locked': not can_access(user, lesson)})
++                'minutes': lesson.minutes, 'difficulty': lesson.difficulty, 'locked': not (is_admin or lesson.pk in accessible_lessons)})
+         for project in module.projects.all():
+-            if not project.published and not admin_access(user):
++            if not project.published and not is_admin:
+                 continue
+-            unlocked = module_access(user, module)
++            unlocked = is_admin or progress['project_unlocked']
+             projects.append({'id': project.public_id, 'name': project.name, 'phase': module.position,
+                 'level': project.level, 'locked': not unlocked,
+                 **({'description': project.description, 'skills': [s.strip() for s in project.skills_csv.split(',') if s.strip()]} if unlocked else {})})
+diff --git a/backend/progression/api.py b/backend/progression/api.py
+--- a/backend/progression/api.py
++++ b/backend/progression/api.py
+@@ -14,7 +14,7 @@
+ from rest_framework.throttling import UserRateThrottle
+ from courses.models import Lesson
+ from .models import LessonIteration
+-from .services import begin, can_access, credit, expire, iteration_data, ordered_lessons, admin_access
++from .services import begin, can_access, credit, expire, iteration_data, admin_access
+ 
+ 
+ @require_GET
+diff --git a/backend/progression/services.py b/backend/progression/services.py
+--- a/backend/progression/services.py
++++ b/backend/progression/services.py
+@@ -1,9 +1,10 @@
+ """Server clock and database state are the only progression authority."""
++from collections import defaultdict
+ from datetime import timedelta
+ from django.conf import settings
+ from django.utils import timezone
+ from rest_framework.exceptions import PermissionDenied
+-from courses.models import Lesson
++from courses.models import Lesson, Module
+ from .models import LessonIteration
+ 
+ 
+@@ -16,34 +17,102 @@
+                                  module__course__status='published', published=True).order_by('module__position', 'position', 'pk')
+ 
+ 
++def course_progress(user, course_id):
++    """Return module state and accessible lessons from saved grades, in curriculum order."""
++    from assessments.models import Assignment, Submission
++
++    modules = Module.objects.filter(course_id=course_id, published=True, course__status='published')
++    lessons_by_module = defaultdict(list)
++    for lesson_id, module_id in ordered_lessons(course_id).values_list('pk', 'module_id'):
++        lessons_by_module[module_id].append(lesson_id)
++
++    finals = {a.module_id: a for a in Assignment.objects.filter(
++        module__in=modules, published=True, module_pass_score__isnull=False,
++    )}
++    submissions = defaultdict(list)
++    passed_lessons = set()
++    if user.is_authenticated:
++        passed_lessons = set(LessonIteration.objects.filter(
++            learner=user, lesson__module__course_id=course_id, status='passed',
++        ).values_list('lesson_id', flat=True))
++        for assignment_id, score in Submission.objects.filter(
++            attempt__learner=user, attempt__assignment__in=finals.values(),
++        ).values_list('attempt__assignment_id', 'review__final_score'):
++            submissions[assignment_id].append(score)
++
++    states = {}
++    accessible_lessons = set()
++    prerequisites_passed = user.is_authenticated
++    for module_id in modules.values_list('pk', flat=True):
++        lessons = lessons_by_module[module_id]
++        lessons_passed = bool(lessons) and all(pk in passed_lessons for pk in lessons)
++        if prerequisites_passed:
++            for lesson_id in lessons:
++                accessible_lessons.add(lesson_id)
++                if lesson_id not in passed_lessons:
++                    break
++
++        final = finals.get(module_id)
++        project = None
++        project_passed = False
++        if final:
++            scores = submissions[final.pk]
++            project_passed = any(score is not None and score >= final.module_pass_score for score in scores)
++            project_status = 'ready'
++            if project_passed:
++                project_status = 'passed'
++            elif None in scores:
++                project_status = 'awaiting_review'
++            elif scores:
++                project_status = 'needs_revision'
++            project = {
++                'slug': final.slug, 'title': final.title,
++                'pass_score': final.module_pass_score, 'status': project_status,
++            }
++
++        project_unlocked = prerequisites_passed and lessons_passed
++        complete = project_unlocked and project_passed
++        if not prerequisites_passed:
++            status = 'locked'
++        elif not lessons:
++            status = 'coming_soon'
++        elif complete:
++            status = 'completed'
++        elif lessons_passed:
++            status = 'final_project' if final else 'awaiting_project'
++        else:
++            status = 'lessons'
++        states[module_id] = {
++            'status': status, 'project_unlocked': project_unlocked, 'final_project': project,
++            'lessons_passed': sum(pk in passed_lessons for pk in lessons), 'lesson_count': len(lessons),
++        }
++        prerequisites_passed = complete
++    return states, accessible_lessons
++
++
+ def can_access(user, lesson):
+     if admin_access(user):
+         return True
+     if not user.is_authenticated:
+         return False
+-    ids = list(ordered_lessons(lesson.module.course_id).values_list('pk', flat=True))
+-    if lesson.pk not in ids:
+-        return False
+-    before = ids[:ids.index(lesson.pk)]
+-    return LessonIteration.objects.filter(learner=user, lesson_id__in=before, status='passed').count() == len(before)
++    _, accessible = course_progress(user, lesson.module.course_id)
++    return lesson.pk in accessible
+ 
+ 
+ def module_access(user, module):
+     if admin_access(user):
+         return True
+-    if not user.is_authenticated or not module.published or module.course.status != 'published':
++    if not user.is_authenticated:
+         return False
+-    # Empty future modules never unlock accidentally. Earlier modules and this module must pass.
+-    own = ordered_lessons(module.course_id).filter(module=module)
+-    if not own.exists():
+-        return False
+-    required = ordered_lessons(module.course_id).filter(module__position__lte=module.position)
+-    return LessonIteration.objects.filter(learner=user, lesson__in=required, status='passed').count() == required.count()
++    states, _ = course_progress(user, module.course_id)
++    return states.get(module.pk, {}).get('project_unlocked', False)
+ 
+ 
+ def require_module(user, module):
+     if not module_access(user, module):
+-        raise PermissionDenied('Pass this module and all earlier published lessons to unlock projects and assignments.')
++        raise PermissionDenied(
++            'Pass earlier modules and their final projects, then finish this module’s lessons.',
++        )
+ 
+ 
+ def expire(iteration, now=None):
+@@ -62,7 +131,7 @@
+ 
+ def begin(user, lesson, now=None):
+     if not can_access(user, lesson):
+-        raise PermissionDenied('Pass all earlier lessons first.')
++        raise PermissionDenied('Pass earlier lessons and the final projects of earlier modules first.')
+     now = now or timezone.now()
+     iteration, created = LessonIteration.objects.get_or_create(learner=user, lesson=lesson, defaults={
+         'started_at': now, 'due_at': now + timedelta(days=14),
+diff --git a/backend/progression/tests.py b/backend/progression/tests.py
+--- a/backend/progression/tests.py
++++ b/backend/progression/tests.py
+@@ -4,7 +4,7 @@
+ from django.test import TestCase, Client, override_settings
+ from django.utils import timezone
+ from courses.models import Course, Module, Lesson, LessonSection, QuizQuestion, Project
+-from assessments.models import Assignment
++from assessments.models import Assignment, AssignmentAttempt, CodeReview, Submission
+ from .models import LessonIteration
+ from .services import begin, expire, credit
+ 
+@@ -74,6 +74,83 @@
+         self.assertFalse(self.client.get('/api/v1/courses/eng/').json()['projects'][0]['locked'])
+         self.assertEqual(self.client.post('/api/v1/assignments/project/start/').status_code,201)
+ 
++    def test_next_module_requires_own_passing_final_review(self):
++        second = Module.objects.create(course=self.course, name='Next module', position=2)
++        Lesson.objects.create(module=second, title='Next module lesson', public_id='three', published=True)
++        assignment = Assignment.objects.get(slug='project')
++        for lesson in (self.lesson, self.next):
++            iteration, _ = begin(self.user, lesson)
++            credit(iteration, 100, True)
++
++        def state():
++            return self.client.get('/api/v1/courses/eng/').json()['phases']
++
++        self.assertEqual(state()[0]['progress']['status'], 'awaiting_project')
++        self.assertEqual(self.post('start', lesson='three').status_code, 403)
++        assignment.module_pass_score = 70
++        assignment.save()
++        self.assertEqual(state()[0]['progress']['status'], 'final_project')
++        attempt = AssignmentAttempt.objects.create(
++            learner=self.user, assignment=assignment, due_at=timezone.now() + timedelta(days=7),
++        )
++        submission = Submission.objects.create(
++            attempt=attempt, repository_url='https://github.com/learner/project',
++            commit_sha='a' * 40, local_tests_passed=100,
++        )
++        self.assertEqual(state()[0]['progress']['final_project']['status'], 'awaiting_review')
++        self.assertEqual(self.post('start', lesson='three').status_code, 403)
++
++        scores = dict(reviewer=self.staff, code_quality_score=100, q1_score=0, q2_score=0,
++                      q3_score=0, q4_score=0, q5_score=0)
++        other_attempt = AssignmentAttempt.objects.create(
++            learner=self.other, assignment=assignment, due_at=timezone.now() + timedelta(days=7),
++        )
++        other_submission = Submission.objects.create(
++            attempt=other_attempt, repository_url='https://github.com/other/project', commit_sha='b' * 40,
++        )
++        CodeReview.objects.create(submission=other_submission, verified_test_score=100, **scores)
++        review = CodeReview.objects.create(submission=submission, verified_test_score=98, **scores)
++        self.assertEqual(review.final_score, 69)
++        self.assertEqual(state()[0]['progress']['final_project']['status'], 'needs_revision')
++        self.assertEqual(self.post('start', lesson='three').status_code, 403)
++
++        review.verified_test_score = 100
++        review.save()
++        self.assertEqual(review.final_score, 70)
++        assignment.published = False
++        assignment.save()
++        self.assertEqual(self.post('start', lesson='three').status_code, 403)
++        assignment.published = True
++        assignment.save()
++        modules = state()
++        self.assertEqual(modules[0]['progress']['status'], 'completed')
++        self.assertEqual(modules[1]['progress']['status'], 'lessons')
++        self.assertEqual(self.post('start', lesson='three').status_code, 201)
++
++    def test_empty_previous_module_blocks_later_module(self):
++        second = Module.objects.create(course=self.course, name='Empty', position=2)
++        third = Module.objects.create(course=self.course, name='Later', position=3)
++        Lesson.objects.create(module=third, title='Later lesson', public_id='later', published=True)
++        assignment = Assignment.objects.get(slug='project')
++        assignment.module_pass_score = 70
++        assignment.save()
++        for lesson in (self.lesson, self.next):
++            credit(begin(self.user, lesson)[0], 100, True)
++        attempt = AssignmentAttempt.objects.create(
++            learner=self.user, assignment=assignment, due_at=timezone.now() + timedelta(days=7),
++        )
++        submission = Submission.objects.create(
++            attempt=attempt, repository_url='https://github.com/learner/project', commit_sha='c' * 40,
++        )
++        CodeReview.objects.create(
++            submission=submission, reviewer=self.staff, verified_test_score=100,
++            code_quality_score=100, q1_score=0, q2_score=0, q3_score=0, q4_score=0, q5_score=0,
++        )
++        phases = self.client.get('/api/v1/courses/eng/').json()['phases']
++        self.assertEqual(phases[1]['id'], second.position)
++        self.assertEqual(phases[1]['progress']['status'], 'coming_soon')
++        self.assertEqual(self.post('start', lesson='later').status_code, 403)
++
+     def test_deadline_exact_boundary_and_supplementary_cap(self):
+         self.post('start');i=LessonIteration.objects.get()
+         from rest_framework.authtoken.models import Token
+@@ -142,6 +219,7 @@
+             call_command('seed_curriculum',verbosity=0)
+             call_command('seed_proofloop',verbosity=0)
+             a=Assignment.objects.get(slug='saire-quotation-engine')
++            self.assertEqual(a.module_pass_score, 70)
+             self.assertTrue(Path(a.starter_bundle.path).is_file())
+             self.assertTrue(Path(a.starter_bundle.path).is_relative_to(root))
+             call_command('seed_proofloop',verbosity=0)
+@@ -166,11 +244,49 @@
+     def test_get_confirms_post_starts_state_protected_flow(self):
+         for provider in ['github','google']:
+             url=f'/accounts/{provider}/login/'
+-            self.assertEqual(self.client.get(url).status_code,200)
++            response = self.client.get(url)
++            self.assertContains(response, '/academy-auth.css')
++            self.assertContains(response, 'SAIRE-Linked Academy')
++            self.assertContains(response, 'name="csrfmiddlewaretoken"')
+             res=self.client.post(url)
+             self.assertEqual(res.status_code,302)
+             self.assertIn('state=',res.url)
+             self.assertIn('client_id=example',res.url)
++
++    def test_pilot_login_lands_on_dashboard(self):
++        get_user_model().objects.create_user('pilot', password='SafeTestPassword123!')
++        response = self.client.post('/accounts/login/', {
++            'login': 'pilot', 'password': 'SafeTestPassword123!',
++        })
++        self.assertRedirects(response, '/dashboard/', fetch_redirect_response=False)
++
++    def test_provider_callback_lands_on_dashboard(self):
++        from urllib.parse import parse_qs, urlsplit
++
++        from allauth.socialaccount.models import SocialAccount
++        from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
++        from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
++        from allauth.socialaccount.providers.oauth2.views import OAuth2Adapter
++
++        user = get_user_model().objects.create_user('returning-learner')
++        for provider, adapter in [('google', GoogleOAuth2Adapter), ('github', GitHubOAuth2Adapter)]:
++            with self.subTest(provider=provider):
++                SocialAccount.objects.create(user=user, provider=provider, uid='12345')
++                client = Client()
++                start = client.post(f'/accounts/{provider}/login/?next=/dashboard/')
++                state = parse_qs(urlsplit(start.url).query)['state'][0]
++
++                def profile(provider_adapter, request, app, token, **kwargs):
++                    data = {'sub': '12345'} if provider == 'google' else {'id': 12345}
++                    return provider_adapter.get_provider().sociallogin_from_response(request, data)
++
++                with patch.object(OAuth2Adapter, 'get_access_token_data', return_value={'access_token': 'test-token'}):
++                    with patch.object(adapter, 'complete_login', autospec=True, side_effect=profile):
++                        response = client.get(
++                            f'/accounts/{provider}/login/callback/', {'code': 'test-code', 'state': state},
++                        )
++                self.assertRedirects(response, '/dashboard/', fetch_redirect_response=False)
++                self.assertEqual(client.get('/api/v1/dashboard/').json()['username'], user.username)
+ 
+     def test_missing_state_callback_cannot_authenticate(self):
+         for provider in ['github','google']:
+diff --git a/backend/templates/allauth/layouts/entrance.html b/backend/templates/allauth/layouts/entrance.html
+new file mode 100644
+--- /dev/null
++++ b/backend/templates/allauth/layouts/entrance.html
+@@ -0,0 +1,28 @@
++{% extends "allauth/layouts/base.html" %}
++
++{% block extra_head %}
++  {{ block.super }}
++  <link rel="stylesheet" href="/academy-auth.css">
++{% endblock %}
++
++{% block body %}
++  <main class="academy-entry entry-auth">
++    <header class="entry-header">
++      <a class="entry-brand" href="/">
++        <img src="/brand/saire-symbol.webp" alt="">
++        <span>SAIRE-Linked Academy</span>
++      </a>
++      <a href="/">Back to the Academy</a>
++    </header>
++    <section class="entry-card">
++      <p class="entry-eyebrow">YOUR LEARNING SPACE</p>
++      {% if messages %}
++        <ul class="entry-messages" aria-live="polite">
++          {% for message in messages %}<li>{{ message }}</li>{% endfor %}
++        </ul>
++      {% endif %}
++      {% block content %}{% endblock %}
++    </section>
++    <footer>SAIRE-Linked Academy · Powered by ProofLoop</footer>
++  </main>
++{% endblock %}
+diff --git a/backend/templates/socialaccount/login.html b/backend/templates/socialaccount/login.html
+new file mode 100644
+--- /dev/null
++++ b/backend/templates/socialaccount/login.html
+@@ -0,0 +1,18 @@
++{% extends "socialaccount/base_entrance.html" %}
++
++{% block head_title %}Continue with {{ provider.name }} · SAIRE-Linked Academy{% endblock %}
++
++{% block content %}
++  {% if process == "connect" %}
++    <h1>Connect {{ provider.name }}</h1>
++    <p>Continue to link this provider to your Academy account.</p>
++  {% else %}
++    <h1>Continue with {{ provider.name }}</h1>
++    <p>Sign in with your {{ provider.name }} account to open your Academy dashboard.</p>
++  {% endif %}
++  <form method="post">
++    {% csrf_token %}
++    <button type="submit" class="entry-button">Continue with {{ provider.name }}</button>
++  </form>
++  <a class="entry-pilot" href="/">Choose a different sign-in method</a>
++{% endblock %}
+diff --git a/components/AcademySignIn.tsx b/components/AcademySignIn.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/AcademySignIn.tsx
+@@ -0,0 +1,47 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { Github } from 'lucide-react';
++import { api } from '@/lib/session-api';
++
++export default function AcademySignIn() {
++  const [providers, setProviders] = useState<string[] | null>(null);
++  const [signedIn, setSignedIn] = useState(false);
++  const [unavailable, setUnavailable] = useState(false);
++
++  useEffect(() => {
++    api<{ providers: string[] }>('/auth/csrf/').then(
++      data => setProviders(data.providers),
++      () => setUnavailable(true),
++    );
++    api('/auth/me/').then(() => setSignedIn(true), () => {});
++  }, []);
++
++  return (
++    <section className="entry-card" aria-labelledby="signin-title">
++      <p className="entry-eyebrow">YOUR LEARNING SPACE</p>
++      <h2 id="signin-title">{signedIn ? 'Welcome back' : 'Sign in to the Academy'}</h2>
++      <p>Open your roadmap, project lab, Mentor and Learning Twin from your dashboard.</p>
++      {signedIn ? <a className="entry-button" href="/dashboard/">Open your dashboard</a> : (
++        <div className="entry-provider-list">
++          {['google', 'github'].map(provider => {
++            const name = provider === 'google' ? 'Google' : 'GitHub';
++            const icon = provider === 'google' ? <span aria-hidden="true" className="entry-google">G</span> : <Github size={20} aria-hidden="true" />;
++            return providers?.includes(provider) ? (
++              <a className="entry-button" key={provider} href={`/accounts/${provider}/login/?next=/dashboard/`}>
++                {icon} Continue with {name}
++              </a>
++            ) : (
++              <button className="entry-button" type="button" key={provider} disabled>
++                {icon} Continue with {name}
++              </button>
++            );
++          })}
++          {unavailable && <p role="status">Sign-in is temporarily unavailable.</p>}
++          {providers && providers.length < 2 && <p role="status">Disabled providers need credentials in the Academy settings.</p>}
++          <a className="entry-pilot" href="/accounts/login/?next=/dashboard/">Use a pilot account</a>
++        </div>
++      )}
++    </section>
++  );
++}
+diff --git a/components/LearnerDashboard.tsx b/components/LearnerDashboard.tsx
+--- a/components/LearnerDashboard.tsx
++++ b/components/LearnerDashboard.tsx
+@@ -1,26 +1,42 @@
+ 'use client';
+-import {useEffect,useState} from 'react';
+-import {api} from '@/lib/session-api';
++import {useCallback,useEffect,useState} from 'react';
++import {api, ApiError} from '@/lib/session-api';
++import ModuleRoadmap, {type Course, type Lesson, type Iteration} from './ModuleRoadmap';
+ import LearningTwinPanel,{type TwinProfile} from './LearningTwinPanel';
+ import '@/app/assignments/learning-twin.css';
+ import '@/app/learner.css';
+-type Iteration={status:string;due_at:string;supplementary_due_at:string|null;raw_score:number|null;credited_score:number|null;grade_cap:number};
+ type Dashboard={username:string;admin:boolean;server_now:string;quote:string;passed:number;badges:string[];iterations:Record<string,Iteration>;projects:{assignment:string;due_at:string}[];learning_twin:TwinProfile};
+-type Lesson={id:string;title:string;phaseId:number;locked:boolean;minutes:number};
+-type Course={slug:string;title:string;lessons:Lesson[];projects:{id:string;name:string;locked:boolean;description?:string}[]};
+ type Detail={id:string;title:string;objective:string;challenge:string;iteration:Iteration|null;sections:{heading:string;body:string;code:string;note:string}[];quiz:{id:number;question:string;answers:string[]}[];passing_count:number};
+ export default function LearnerDashboard(){
+  const [dash,setDash]=useState<Dashboard|null>(null),[courses,setCourses]=useState<Course[]>([]),[detail,setDetail]=useState<Detail|null>(null);
+  const [answers,setAnswers]=useState<Record<number,number>>({}),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[ready,setReady]=useState(false);
+- const [providers,setProviders]=useState<string[]>([]);
+- async function refresh(){
+-   const catalog=await api<{slug:string}[]>('/courses/');
+-   setCourses(await Promise.all(catalog.map(c=>api<Course>(`/courses/${c.slug}/`))));
+-   try{setDash(await api<Dashboard>('/dashboard/'));}catch{setDash(null);}
+-   setReady(true);
+- }
+- useEffect(()=>{refresh().catch(e=>{setError(e.message);setReady(true);});fetch('/api/v1/auth/csrf/').then(r=>r.json()).then(x=>setProviders(x.providers||[])).catch(()=>{});},[]);
+- useEffect(()=>{const id=setInterval(()=>{void refresh().catch(()=>{});},60000);return()=>clearInterval(id);},[]);
++ const refresh = useCallback(async () => {
++   try {
++     const dashboard = await api<Dashboard>('/dashboard/');
++     const catalog = await api<{slug: string}[]>('/courses/');
++     const nextCourses = await Promise.all(catalog.map(c => api<Course>(`/courses/${c.slug}/`)));
++     setDash(dashboard);
++     setCourses(nextCourses);
++     setError('');
++   } catch (cause) {
++     if (cause instanceof ApiError && (cause.status === 401 || cause.status === 403)) {
++       window.location.replace('/');
++       return;
++     }
++     setError(cause instanceof Error ? cause.message : 'Could not load your dashboard.');
++   } finally {
++     setReady(true);
++   }
++ }, []);
++ useEffect(() => {
++   void refresh();
++   const timer = setInterval(() => void refresh(), 60000);
++   return () => clearInterval(timer);
++ }, [refresh]);
++ const openLessonId = detail?.id;
++ useEffect(() => {
++   if (openLessonId) document.getElementById('active-lesson')?.focus();
++ }, [openLessonId]);
+  async function act(lesson:Lesson,action:string){
+    setBusy(true);setError('');setNotice('');
+    try{if(action!=='open')await api(`/lessons/${lesson.id}/${action}/`,{});
+@@ -31,24 +47,39 @@
+    if(!detail)return;setBusy(true);setError('');
+    try{const out=await api<{iteration:Iteration}>(`/lessons/${detail.id}/submit/`,{answers:detail.quiz.map(q=>answers[q.id])});
+      setDetail({...detail,iteration:out.iteration});await refresh();
+-     setNotice(out.iteration.status==='passed'?'🎉 Lesson passed. Your next step is unlocked!':'Review the lesson and try again before your deadline.');
+-   }catch(e){setError((e as Error).message);await refresh();}finally{setBusy(false);}
++     setNotice(out.iteration.status==='passed'?'🎉 Lesson passed. Check your module for the next step.':'Review the lesson and try again before your deadline.');
++   }catch(e){await refresh();setError((e as Error).message);}finally{setBusy(false);}
+  }
+- async function logout(){setBusy(true);try{await api('/auth/session-logout/',{});setDash(null);setDetail(null);await refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
++ async function logout(){setBusy(true);try{await api('/auth/session-logout/',{});window.location.replace('/');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  const date=(s:string)=>new Date(s).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});
+  return <main className="academy">
+-   <header><a href="/" className="academy-brand"><img src="/brand/saire-symbol.webp" alt=""/>SAIRE-LINKED <small>ACADEMY / PROOFLOOP</small></a><nav><a href="/assignments">Project lab & Mentor</a><a href="/demo">Sample demo</a>{dash&&<button disabled={busy} onClick={logout}>Sign out</button>}</nav></header>
++   <header><a href="/" className="academy-brand"><img src="/brand/saire-symbol.webp" alt=""/>SAIRE-LINKED <small>ACADEMY / PROOFLOOP</small></a><nav><a href="#learning-roadmap">Roadmap</a><a href="/assignments/">Project lab & Mentor</a><a href="#learning-twin">Learning Twin</a>{dash&&<button disabled={busy} onClick={logout}>Sign out</button>}</nav></header>
+    <section className="academy-hero"><p className="eyebrow">LEARN → BUILD → DEFEND → EVOLVE → PROVE</p><h1>{dash?`Welcome back, ${dash.username}.`:'Build skill. Leave proof.'}</h1><p>{dash?.quote||'One focused lesson. One honest attempt. One step closer to the engineer you are becoming.'}</p>{dash?.admin&&<strong className="badge">Administrator testing access · all content unlocked</strong>}</section>
+    {error&&<p role="alert" className="academy-error">{error}</p>}{notice&&<p role="status" className="academy-notice">{notice}</p>}
+-   {!ready?<p>Opening your academy…</p>:!dash?<section className="academy-card"><h2>Your journey starts here</h2><p>Sign in for your personal roadmap, saved progress and server-verified deadlines.</p><div className="academy-actions">{['github','google'].map(p=>providers.includes(p)?<a className="academy-button" key={p} href={`/accounts/${p}/login/?next=/`}>Continue with {p==='github'?'GitHub':'Google'}</a>:<span key={p}>{p==='github'?'GitHub':'Google'}: awaiting server credentials</span>)}<a href="/accounts/login/?next=/">Pilot account sign-in</a></div><p>No iteration starts until you press “Start 14-day lesson”.</p></section>:<>
++   {!ready ? <p role="status">Opening your dashboard…</p> : dash ? <>
+    <section className="academy-stats"><div><strong>{dash.passed}</strong><span>Lessons passed</span></div><div><strong>{Object.values(dash.iterations).filter(i=>['active','supplementary'].includes(i.status)).length}</strong><span>Active iterations</span></div><div><strong>{dash.badges.join(' · ')||'Your first proof awaits'}</strong><span>Milestones</span></div></section>
+-   <section className="academy-card"><h2>Your iteration rules</h2><p>14 days from starting. Passing unlocks the next lesson. A missed deadline fails the original attempt. One supplementary attempt ends on day 21 and caps credited marks at 70% (or your server’s configured cap). Quiz competence uses the published pass count. Lessons without quizzes require instructor sign-off. Exhausted attempts need instructor support; automatic resets are unavailable.</p><p>Times use your device’s time zone. Django’s clock decides acceptance. Projects unlock after all lessons up to that module are passed.</p></section>
+-   </>}
+-   {courses.map(course=><section key={course.slug} className="academy-card"><h2>{course.title}</h2><ol className="academy-roadmap">{course.lessons.map((l,index)=>{
+-     const i=dash?.iterations[l.id];return <li key={l.id}><span className="lesson-number">{i?.status==='passed'?'✓':l.locked?'🔒':index+1}</span><div><h3>{l.title}</h3><p>Phase {l.phaseId} · {l.minutes} min · {i?.status.replace('_',' ')||(l.locked?'Locked':'Ready to start')}</p>{i&&<p>Deadline: {date(i.supplementary_due_at||i.due_at)}{i.credited_score!==null&&` · Credited ${i.credited_score}% (raw ${i.raw_score}%)`}</p>}{i?.status==='failed'&&<p>Original attempt failed. Supplementary window ends {date(new Date(new Date(i.due_at).getTime()+7*86400000).toISOString())}; grade cap {i.grade_cap}%.</p>}</div>{dash&&!l.locked&&<div className="academy-actions"><button disabled={busy} onClick={()=>act(l,dash.admin||i?'open':'start')}>{dash.admin||i?'Open lesson':'Start 14-day lesson'}</button>{i?.status==='failed'&&<button disabled={busy} onClick={()=>act(l,'supplement')}>Begin supplementary</button>}</div>}</li>;
+-   })}</ol><h3>Project milestones</h3><div className="academy-projects">{course.projects.map(p=><article key={p.id}><strong>{p.locked?'🔒':'🚀'} {p.name}</strong><p>{p.locked?'Pass the required lessons to unlock.':p.description}</p>{!p.locked&&<a href="/assignments">Open project lab</a>}</article>)}</div></section>)}
+-   {dash&&<><section className="academy-card"><h2>Your project attempts</h2>{dash.projects.length?dash.projects.map(p=><p key={p.assignment}>{p.assignment} · due {date(p.due_at)} · <a href="/assignments">Open lab and grades</a></p>):<p>Your submissions and reviews appear in the project lab.</p>}</section><LearningTwinPanel profile={dash.learning_twin} authenticated={true} loading={false} error="" onRefresh={()=>void refresh()}/></>}
+-   {detail&&<section className="academy-card" aria-label="Lesson content"><button onClick={()=>setDetail(null)}>Close lesson</button><h2>{detail.title}</h2><p>{detail.objective}</p>{detail.sections.map((s,j)=><article key={j}><h3>{s.heading}</h3><p style={{whiteSpace:'pre-wrap'}}>{s.body}</p>{s.code&&<pre><code>{s.code}</code></pre>}{s.note&&<p>{s.note}</p>}</article>)}<h3>Your challenge</h3><p>{detail.challenge}</p>{detail.quiz.length?<form onSubmit={e=>{e.preventDefault();void submit();}}><h3>Knowledge check · {detail.passing_count} correct required</h3>{detail.quiz.map(q=><fieldset key={q.id}><legend>{q.question}</legend>{q.answers.map((a,j)=><label key={j}><input required type="radio" name={`q${q.id}`} value={j} checked={answers[q.id]===j} onChange={()=>setAnswers({...answers,[q.id]:j})}/>{a}</label>)}</fieldset>)}<button disabled={busy||!detail.iteration||!['active','supplementary'].includes(detail.iteration.status)}>Submit for server grading</button>{!detail.iteration&&<p>Admin preview does not create progress. Use a learner account to test iteration grading.</p>}</form>:<p>Instructor sign-off is required for completion.</p>}</section>}
++   <section className="academy-card"><h2>Your iteration rules</h2><p>14 days from starting. Passing unlocks the next lesson. A missed deadline fails the original attempt. One supplementary attempt ends on day 21 and caps credited marks at 70% (or your server’s configured cap). Quiz competence uses the published pass count. Lessons without quizzes require instructor sign-off. Exhausted attempts need instructor support; automatic resets are unavailable.</p><p>Times use your device’s time zone. Django’s clock decides acceptance. Finish a module’s lessons to open its final project. A passing project review unlocks the next module.</p></section>
++   {detail&&<section id="active-lesson" tabIndex={-1} className="academy-card" aria-label="Lesson content"><button onClick={()=>setDetail(null)}>Close lesson</button><h2>{detail.title}</h2><p>{detail.objective}</p>{detail.sections.map((s,j)=><article key={j}><h3>{s.heading}</h3><p style={{whiteSpace:'pre-wrap'}}>{s.body}</p>{s.code&&<pre><code>{s.code}</code></pre>}{s.note&&<p>{s.note}</p>}</article>)}<h3>Your challenge</h3><p>{detail.challenge}</p>{detail.quiz.length?<form onSubmit={e=>{e.preventDefault();void submit();}}><h3>Knowledge check · {detail.passing_count} correct required</h3>{detail.quiz.map(q=><fieldset key={q.id}><legend>{q.question}</legend>{q.answers.map((a,j)=><label key={j}><input required type="radio" name={`q${q.id}`} value={j} checked={answers[q.id]===j} onChange={()=>setAnswers({...answers,[q.id]:j})}/>{a}</label>)}</fieldset>)}<button disabled={busy||!detail.iteration||!['active','supplementary'].includes(detail.iteration.status)}>Submit for server grading</button>{!detail.iteration&&<p>Admin preview does not create progress. Use a learner account to test iteration grading.</p>}</form>:<p>Instructor sign-off is required for completion.</p>}</section>}
++   <ModuleRoadmap courses={courses} iterations={dash.iterations} busy={busy} admin={dash.admin} onLessonAction={act} />
++   <section className="academy-card">
++     <h2>Your project attempts</h2>
++     {dash.projects.length ? dash.projects.map(project => (
++       <p key={project.assignment}>{project.assignment} · due {date(project.due_at)} · <a href={`/assignments/?assignment=${encodeURIComponent(project.assignment)}`}>Open lab and grades</a></p>
++     )) : <p>Your submissions and reviews will appear here.</p>}
++   </section>
++   <section className="academy-card">
++     <h2>Study tools</h2>
++     <p>Plan your week and browse the v9 resource library. Study plans are saved in this browser.</p>
++     <nav aria-label="Study tools">
++       <a href="/demo/?view=planner">Study planner</a>
++       <a href="/demo/?view=resources">Resource library</a>
++       <a href="/demo/">Sample demo</a>
++     </nav>
++   </section>
++   <div id="learning-twin">
++     <LearningTwinPanel profile={dash.learning_twin} authenticated loading={false} error="" onRefresh={() => void refresh()} />
++   </div>
++   </> : <button type="button" onClick={() => void refresh()}>Retry dashboard</button>}
+    <footer>Live Django data · Sample demo progress never counts toward your academy record.</footer>
+  </main>;
+ }
+diff --git a/components/LearningPlatform.tsx b/components/LearningPlatform.tsx
+--- a/components/LearningPlatform.tsx
++++ b/components/LearningPlatform.tsx
+@@ -69,6 +69,10 @@
+    setHydrated(true);
+  },[courseSlug]);
+  useEffect(()=>{setCourse(demoCourse);setCatalog([]);setApiStatus("offline");},[]);
++ useEffect(() => {
++   const requested = new URLSearchParams(window.location.search).get('view');
++   if (requested === 'planner' || requested === 'resources') setView(requested);
++ }, []);
+  useEffect(()=>{if(hydrated){try{localStorage.setItem(`${STORAGE}:${courseSlug}`,JSON.stringify(saved))}catch{/* storage may be disabled */}}},[saved,hydrated,courseSlug]);
+  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(""),3000);return ()=>clearTimeout(timer)},[toast]);
+  useEffect(()=>{function onKey(e:KeyboardEvent){if(e.key==="Escape"){setProjectOpen(null);setMenuOpen(false)}}window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[]);
+diff --git a/components/ModuleRoadmap.tsx b/components/ModuleRoadmap.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/ModuleRoadmap.tsx
+@@ -0,0 +1,152 @@
++'use client';
++
++export type Lesson = {
++  id: string;
++  title: string;
++  phaseId: number;
++  locked: boolean;
++  minutes: number;
++};
++
++export type Iteration = {
++  status: string;
++  due_at: string;
++  supplementary_due_at: string | null;
++  raw_score: number | null;
++  credited_score: number | null;
++  grade_cap: number;
++};
++
++type ModuleStatus = 'locked' | 'coming_soon' | 'lessons' | 'awaiting_project' | 'final_project' | 'completed' | 'admin_preview';
++type ProjectStatus = 'ready' | 'awaiting_review' | 'needs_revision' | 'passed';
++
++type Module = {
++  id: number;
++  name: string;
++  desc: string;
++  topics: string[];
++  progress: {
++    status: ModuleStatus;
++    project_unlocked: boolean;
++    final_project: { slug: string; title: string; pass_score: number; status: ProjectStatus } | null;
++  };
++};
++
++export type Course = {
++  slug: string;
++  title: string;
++  phases: Module[];
++  lessons: Lesson[];
++  projects: { id: string; name: string; phase: number; locked: boolean; description?: string }[];
++};
++
++const moduleLabels: Record<ModuleStatus, string> = {
++  locked: 'Locked',
++  coming_soon: 'Content coming soon',
++  lessons: 'Lessons in progress',
++  awaiting_project: 'Final project coming soon',
++  final_project: 'Final project required',
++  completed: 'Module complete',
++  admin_preview: 'Admin preview',
++};
++const projectLabels: Record<ProjectStatus, string> = {
++  ready: 'Ready to start',
++  awaiting_review: 'Awaiting instructor review',
++  needs_revision: 'Below the pass mark. Revise and submit another commit.',
++  passed: 'Passed',
++};
++
++function formatDate(value: string) {
++  return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
++}
++
++export default function ModuleRoadmap({ courses, iterations, busy, admin, onLessonAction }: {
++  courses: Course[];
++  iterations: Record<string, Iteration>;
++  busy: boolean;
++  admin: boolean;
++  onLessonAction: (lesson: Lesson, action: 'open' | 'start' | 'supplement') => void;
++}) {
++  return (
++    <div id="learning-roadmap">
++      <h2>Learning roadmap</h2>
++      {!courses.length && <p>No courses have been published yet.</p>}
++      {courses.map(course => (
++        <section key={course.slug} className="academy-card">
++          <h2>{course.title}</h2>
++          {course.phases.map(module => {
++            const { status, final_project: final, project_unlocked: projectUnlocked } = module.progress;
++            const lessons = course.lessons.filter(lesson => lesson.phaseId === module.id);
++            const ideas = course.projects.filter(project => project.phase === module.id && !project.locked);
++            return (
++              <article className="academy-module" key={module.id}>
++                <div className="academy-module-heading">
++                  <h3>Module {module.id} · {module.name}</h3>
++                  <span className="academy-module-status">{moduleLabels[status]}</span>
++                </div>
++                <p>{module.desc}</p>
++                {status === 'locked' && <p>Complete the earlier modules and pass their final projects to unlock this module.</p>}
++                {module.topics.length > 0 && (
++                  <details>
++                    <summary>View syllabus</summary>
++                    <ul>{module.topics.map((topic, index) => <li key={index}>{topic}</li>)}</ul>
++                  </details>
++                )}
++                {lessons.length > 0 && (
++                  <ol className="academy-roadmap">
++                    {lessons.map((lesson, index) => {
++                      const iteration = iterations[lesson.id];
++                      const open = admin || Boolean(iteration);
++                      const statusLabel = lesson.locked ? 'Locked' : iteration?.status.replaceAll('_', ' ') || 'Ready to start';
++                      return (
++                        <li key={lesson.id}>
++                          <span className="lesson-number" aria-hidden="true">{lesson.locked ? '🔒' : iteration?.status === 'passed' ? '✓' : index + 1}</span>
++                          <div>
++                            <h4>{lesson.title}</h4>
++                            <p>{lesson.minutes} min · {statusLabel}</p>
++                            {iteration && !lesson.locked && (
++                              <p>Deadline {formatDate(iteration.supplementary_due_at || iteration.due_at)}
++                                {iteration.credited_score !== null && ` · Credited ${iteration.credited_score}% (raw ${iteration.raw_score}%)`}
++                              </p>
++                            )}
++                            {iteration?.status === 'failed' && !lesson.locked && (
++                              <p>Supplementary window ends {formatDate(new Date(Date.parse(iteration.due_at) + 7 * 86400000).toISOString())} · {iteration.grade_cap}% cap</p>
++                            )}
++                          </div>
++                          {!lesson.locked && (
++                            <div className="academy-actions">
++                              <button disabled={busy} onClick={() => onLessonAction(lesson, open ? 'open' : 'start')}>
++                                {open ? 'Open lesson' : 'Start 14-day lesson'}
++                              </button>
++                              {iteration?.status === 'failed' && (
++                                <button disabled={busy} onClick={() => onLessonAction(lesson, 'supplement')}>Begin supplementary</button>
++                              )}
++                            </div>
++                          )}
++                        </li>
++                      );
++                    })}
++                  </ol>
++                )}
++                {final && (
++                  <div className="academy-capstone">
++                    <h4>Final project · {final.title}</h4>
++                    <p>Pass mark {final.pass_score}% · {projectUnlocked ? projectLabels[final.status] : status === 'locked' ? 'Module locked' : 'Finish the required lessons first'}</p>
++                    {projectUnlocked && <a href={`/assignments/?assignment=${encodeURIComponent(final.slug)}`}>Open final project →</a>}
++                  </div>
++                )}
++                {status === 'awaiting_project' && <p>This module’s lessons are complete. Progression resumes when its final project is published.</p>}
++                {ideas.length > 0 && (
++                  <details>
++                    <summary>Additional project ideas</summary>
++                    <ul>{ideas.map(idea => <li key={idea.id}><strong>{idea.name}</strong>{idea.description && ` · ${idea.description}`}</li>)}</ul>
++                  </details>
++                )}
++              </article>
++            );
++          })}
++        </section>
++      ))}
++    </div>
++  );
++}
+diff --git a/docs/PROOFLOOP_V10_1_ACADEMY_ENTRY.md b/docs/PROOFLOOP_V10_1_ACADEMY_ENTRY.md
+new file mode 100644
+--- /dev/null
++++ b/docs/PROOFLOOP_V10_1_ACADEMY_ENTRY.md
+@@ -0,0 +1,33 @@
++# ProofLoop v10.1
++
++The public homepage explains SAIRE-Linked Academy and offers Google, GitHub and pilot account sign-in. Both OAuth confirmation pages use the Academy design. The provider hosts its own consent screen. A successful sign-in opens `/dashboard/`, which brings together the live roadmap, project lab, Mentor, Learning Twin and links to the v9 study tools.
++
++## Update your v10 installation
++
++Back up your database, then apply the patch from your project root or merge the full source into a separate copy of your project. Keep your existing local environment settings, database and private media. The patch was prepared against the earlier ProofLoop v10 source ZIP.
++
++```powershell
++git apply --check .\SAIRE_Academy_v10_to_v10_1.patch
++git apply .\SAIRE_Academy_v10_to_v10_1.patch
++cd backend
++python manage.py migrate
++```
++
++Run the Django and Next.js servers as before. If running a production build, rebuild and restart Next.js. For a fresh install or first-time OAuth setup, follow the [v10 setup guide](PROOFLOOP_V10_LEARNER_EXPERIENCE.md). Its OAuth credentials and callback paths still apply. Use the Next.js public origin when visiting the homepage or account pages so the shared stylesheet, session and callback routes are available.
++
++## Module completion
++
++1. Pass the module’s published lessons in order. Existing 14-day lesson windows and supplementary rules apply.
++2. Open the designated final project in ProofLoop. Submit a commit for instructor review using the existing grading workflow.
++3. A saved review at or above the assignment’s module pass mark completes the module. Django then unlocks the next published module. A pending review, a below-pass score or an optional assignment keeps the gate closed. Any passing review on the learner’s designated final project counts, including existing reviews on that assignment.
++
++Migration `assessments.0003` designates the existing **SAIRE Quotation Engine** as module 1’s final project with a **70%** pass mark. It preserves attempts, submissions and reviews. Fresh seeds apply the same designation. In Django Admin, set **Module pass score** on one published assignment per module to designate its final project. Leave that field blank for optional assignments. The percentage sets the progression threshold and does not change how ProofLoop calculates the project grade.
++
++The original v9 seed contains four live lessons and one graded assignment in module 1. Later module outlines are visible as syllabus previews. To offer a later module, publish its lessons and designate a published final assignment. A module with no published lessons or final project cannot be marked complete. Superusers keep their existing preview access. Study plans and sample activity remain local to the browser.
++
++## Quick acceptance check
++
++- Open the homepage signed out. Both configured providers should open the same Academy confirmation layout, then redirect through the provider to your dashboard.
++- Sign in with a learner account. Module 1 should have a lesson available and later modules should show as locked.
++- Complete the module’s lessons. The Quotation Engine should open in the project lab. Verify that a pending review or a below-pass mark leaves the next module locked.
++- Record a passing instructor review. Refresh the dashboard. Module 1 should show as complete. A subsequent module with no published lessons will show as coming soon.
+diff --git a/lib/session-api.ts b/lib/session-api.ts
+--- a/lib/session-api.ts
++++ b/lib/session-api.ts
+@@ -1,3 +1,9 @@
++export class ApiError extends Error {
++  constructor(message: string, readonly status: number) {
++    super(message);
++  }
++}
++
+ export async function api<T>(path:string, body?:object):Promise<T>{
+   let csrf='';
+   if(body){
+@@ -9,6 +15,6 @@
+     headers:{Accept:'application/json',...(body?{'Content-Type':'application/json','X-CSRFToken':csrf}:{})},
+     ...(body?{body:JSON.stringify(body)}:{})});
+   const data=await res.json();
+-  if(!res.ok) throw new Error(typeof data.detail==='string'?data.detail:JSON.stringify(data));
++  if(!res.ok) throw new ApiError(typeof data.detail==='string'?data.detail:JSON.stringify(data), res.status);
+   return data as T;
+ }
+diff --git a/public/academy-auth.css b/public/academy-auth.css
+new file mode 100644
+--- /dev/null
++++ b/public/academy-auth.css
+@@ -0,0 +1,85 @@
++body:has(.academy-entry) {
++  margin: 0;
++  color: #effaf5;
++  background: #081613;
++  font: 16px/1.6 system-ui, sans-serif;
++}
++.academy-entry, .academy-entry * { box-sizing: border-box; }
++.academy-entry {
++  width: min(100% - 36px, 1160px);
++  min-height: 100vh;
++  margin: auto;
++  display: flex;
++  flex-direction: column;
++}
++.entry-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  flex-wrap: wrap;
++  gap: 12px;
++  padding: 24px 0;
++  border-bottom: 1px solid #24413a;
++}
++.academy-entry a { color: #a4f3ce; }
++.entry-brand { display: flex; align-items: center; gap: 12px; font-weight: 750; text-decoration: none; }
++.entry-brand img { width: 42px; height: 42px; object-fit: contain; }
++.entry-hero {
++  flex: 1;
++  display: grid;
++  grid-template-columns: 1.35fr 1fr;
++  align-items: center;
++  gap: clamp(32px, 7vw, 100px);
++  padding: clamp(48px, 9vw, 120px) 0;
++}
++.academy-entry h1, .academy-entry h2 { margin: 0 0 18px; line-height: 1.12; }
++.entry-intro h1 { font-size: clamp(2.4rem, 5vw, 4.5rem); letter-spacing: -.055em; }
++.academy-entry p, .academy-entry dd, .academy-entry footer { color: #b5cec3; }
++.academy-entry .entry-eyebrow { color: #83edb6; font-weight: 750; font-size: .75rem; letter-spacing: .14em; }
++.entry-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 28px 0 0; }
++.entry-steps dt { font-weight: 750; color: #b7f5d5; }
++.entry-steps dd { margin: 4px 0 0; font-size: .9rem; }
++.entry-card {
++  background: #102820;
++  border: 1px solid #34594b;
++  border-radius: 22px;
++  padding: clamp(22px, 4vw, 40px);
++}
++.entry-provider-list { display: grid; gap: 12px; margin-top: 22px; }
++.entry-button, .entry-card button[type=submit] {
++  display: flex;
++  width: 100%;
++  justify-content: center;
++  align-items: center;
++  gap: 10px;
++  min-height: 46px;
++  padding: 10px 14px;
++  border: 1px solid #75d9a7;
++  border-radius: 10px;
++  background: #1c4033;
++  color: #eafff3;
++  font: inherit;
++  font-weight: 650;
++  text-decoration: none;
++  cursor: pointer;
++}
++.entry-button:disabled { opacity: .5; cursor: default; }
++.entry-google { font-weight: 800; font-size: 1.2rem; }
++.entry-pilot { display: inline-block; margin-top: 10px; font-size: .9rem; }
++.entry-auth .entry-card { width: min(100%, 460px); align-self: center; margin: auto 0; }
++.entry-auth .entry-header { margin-bottom: 32px; }
++.entry-auth .entry-card input:not([type=checkbox]):not([type=hidden]) {
++  width: 100%;
++  border: 1px solid #527768;
++  border-radius: 8px;
++  background: #081613;
++  padding: 10px;
++  color: #effaf5;
++  font: inherit;
++}
++.academy-entry footer { padding: 24px 0; font-size: .85rem; }
++.academy-entry :focus-visible { outline: 3px solid #92edbb; outline-offset: 4px; }
++@media (max-width: 740px) {
++  .entry-hero { grid-template-columns: 1fr; }
++  .entry-steps { grid-template-columns: 1fr; gap: 10px; }
++}

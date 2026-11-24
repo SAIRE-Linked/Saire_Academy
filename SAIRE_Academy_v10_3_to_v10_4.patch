@@ -1,0 +1,2585 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,8 @@
+-# SAIRE-Linked Academy / ProofLoop v10.3
+-
+-For the current release, see the [v10.3 Code Defence Room upgrade guide](docs/PROOFLOOP_V10_3_CODE_DEFENCE.md).
++# SAIRE-Linked Academy / ProofLoop v10.4
++
++Start with the [v10.4 Beginner Foundations upgrade guide](docs/PROOFLOOP_V10_4_BEGINNER_FOUNDATIONS.md).
++
++For Code Defence setup, see the [v10.3 Code Defence Room upgrade guide](docs/PROOFLOOP_V10_3_CODE_DEFENCE.md).
+ 
+ Start with the [v10.2 classroom upgrade guide](docs/PROOFLOOP_V10_2_CLASSROOM.md).
+ 
+diff --git a/app/academy-study.css b/app/academy-study.css
+new file mode 100644
+--- /dev/null
++++ b/app/academy-study.css
+@@ -0,0 +1,28 @@
++.academy-study { max-width: 880px; }
++.academy-study h2 { margin: 22px 0 10px; }
++.academy-study p, .study-panel li, .study-panel dd { line-height: 1.65; }
++.study-panel {
++  padding: 16px;
++  border: 1px solid #476463;
++  border-radius: 10px;
++  margin: 12px 0;
++  text-align: left;
++}
++.study-panel p { white-space: pre-wrap; }
++.study-panel h3, .study-panel h4 { margin: 6px 0; }
++.study-panel a { color: #a5edd2; text-decoration: underline; }
++.study-panel pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: #101c25; }
++.study-panel fieldset { border: 1px solid #476463; margin: 10px 0; padding: 10px; }
++.study-panel legend { padding: 0 4px; font-weight: 600; }
++.study-panel summary { cursor: pointer; font-weight: 600; }
++.study-panel dd { margin-inline-start: 0; }
++.study-label { display: grid; gap: 4px; margin: 10px 0; }
++.study-label input, .study-label select, .study-label textarea {
++  color: inherit; background: #101c25; border: 1px solid #63807c;
++  padding: 8px; border-radius: 5px; width: 100%; font: inherit;
++}
++.study-choice { display: flex; gap: 10px; align-items: baseline; margin: 8px 0; }
++.study-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
++.study-top-tools { margin-bottom: 16px; }
++.study-panel :focus-visible, .academy-study :focus-visible { outline: 2px solid #9ef3cf; outline-offset: 3px; }
++.text-first .hero-grid, .text-first .hero-orb, .text-first .banner-visual, .text-first .lesson-art-glow { display: none; }
+diff --git a/app/assignments/page.tsx b/app/assignments/page.tsx
+--- a/app/assignments/page.tsx
++++ b/app/assignments/page.tsx
+@@ -269,6 +269,7 @@
+             <button className="proofloop-primary" disabled={loading}><LogIn size={17}/> Sign in to ProofLoop</button>
+           </form>:<div className="proofloop-workspace">
+             <div className="proofloop-user"><span>Signed in as <strong>{learner}</strong></span><button onClick={logout}><LogOut size={15}/> Sign out</button></div>
++            {!attempt&&<p><a href="/dashboard/?view=academy&section=handbook">Review the rules and Getting Ready checklist</a> before starting.</p>}
+             {!attempt?<button className="proofloop-primary" disabled={loading} onClick={begin}><Code2 size={18}/> Start project and set deadline</button>:<>
+               <div className="proofloop-deadline"><CalendarClock size={19}/><div><small>YOUR PROJECT DEADLINE</small><strong>{new Date(attempt.due_at).toLocaleString()}</strong></div></div>
+               <div className="proofloop-actions"><button className="proofloop-primary" onClick={starter} disabled={!selected.has_starter||loading}><Download size={18}/> Download starter</button><button className="proofloop-secondary" onClick={()=>refresh(selected.slug)} disabled={loading}>Refresh status</button></div>
+diff --git a/backend/.env.example b/backend/.env.example
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -34,3 +34,7 @@
+ # Trust the Next.js proxy forwarded host for correct OAuth callback origin.
+ # Backend must be private/firewalled in production when this is enabled.
+ DJANGO_USE_X_FORWARDED_HOST=1
++
++# Change the orientation version when the Handbook rules materially change.
++# SAIRE_ORIENTATION_VERSION=2026-11-v1
++# SAIRE_SUPPORT_EMAIL=academy-support@example.edu
+diff --git a/backend/assessments/api.py b/backend/assessments/api.py
+--- a/backend/assessments/api.py
++++ b/backend/assessments/api.py
+@@ -124,7 +124,10 @@
+     a = get_object_or_404(visible(request.user), slug=slug)
+     from progression.services import require_module
+     require_module(request.user, a.module)
++    from progression.policy import require_ready_to_start
+     with transaction.atomic():
++        if not AssignmentAttempt.objects.filter(learner=request.user, assignment=a).exists():
++            require_ready_to_start(request.user, a.module)
+         started = timezone.now()
+         attempt, created = AssignmentAttempt.objects.get_or_create(
+             learner=request.user, assignment=a,
+diff --git a/backend/assessments/test_grading_worker.py b/backend/assessments/test_grading_worker.py
+--- a/backend/assessments/test_grading_worker.py
++++ b/backend/assessments/test_grading_worker.py
+@@ -45,6 +45,9 @@
+ 
+     def setUp(self):
+         self.grant_lesson_prerequisites()
++        from django.conf import settings
++        from progression.models import OrientationAcknowledgment
++        OrientationAcknowledgment.objects.create(learner=self.student, version=settings.SAIRE_ORIENTATION_VERSION)
+ 
+     def learner(self):
+         return {'HTTP_AUTHORIZATION': f'Token {self.token.key}'}
+diff --git a/backend/assessments/tests.py b/backend/assessments/tests.py
+--- a/backend/assessments/tests.py
++++ b/backend/assessments/tests.py
+@@ -41,6 +41,9 @@
+ 
+     def setUp(self):
+         self.grant_lesson_prerequisites()
++        from django.conf import settings
++        from progression.models import OrientationAcknowledgment
++        OrientationAcknowledgment.objects.create(learner=self.user, version=settings.SAIRE_ORIENTATION_VERSION)
+ 
+     def auth(self, token=None):
+         return {'HTTP_AUTHORIZATION': f'Token {(token or self.token).key}'}
+diff --git a/backend/config/settings.py b/backend/config/settings.py
+--- a/backend/config/settings.py
++++ b/backend/config/settings.py
+@@ -117,3 +117,9 @@
+ 
+ # Enable only when the backend is reachable exclusively through a trusted proxy.
+ USE_X_FORWARDED_HOST = os.getenv("DJANGO_USE_X_FORWARDED_HOST", "0") == "1"
++
++
++SAIRE_ORIENTATION_VERSION = os.getenv('SAIRE_ORIENTATION_VERSION', '2026-11-v1').strip()
++if not 1 <= len(SAIRE_ORIENTATION_VERSION) <= 60:
++    raise RuntimeError('SAIRE_ORIENTATION_VERSION must contain 1 to 60 characters')
++SAIRE_SUPPORT_EMAIL = os.getenv('SAIRE_SUPPORT_EMAIL', '').strip()
+diff --git a/backend/content/academy_foundations_v104.json b/backend/content/academy_foundations_v104.json
+new file mode 100644
+--- /dev/null
++++ b/backend/content/academy_foundations_v104.json
+@@ -0,0 +1,355 @@
++{
++  "outcomes": [
++    [
++      "Run and explain a short Python program.",
++      "Use values, decisions, loops and functions to solve a small problem.",
++      "Test a quotation calculation and explain the evidence in a code defence."
++    ],
++    [
++      "Break a problem into steps and compare two solutions.",
++      "Choose a collection for searching or grouping records."
++    ],
++    [
++      "Use version history to explain a change.",
++      "Write readable code and tests that another developer can run."
++    ],
++    [
++      "Trace a request through an API and database.",
++      "Explain what a deployed service needs to run."
++    ],
++    [
++      "Summarise a dataset and explain what the results show.",
++      "Check assumptions before interpreting results."
++    ],
++    [
++      "Separate training and evaluation data.",
++      "Compare a model against a simple baseline."
++    ],
++    [
++      "Explain what a neural model learns from examples.",
++      "Inspect errors in a small text prediction task."
++    ],
++    [
++      "Design prompts with clear inputs and expected outputs.",
++      "Check whether generated answers are grounded in a source."
++    ],
++    [
++      "Give an agent a bounded task and identify when people should intervene.",
++      "Check a tool result before acting on it."
++    ],
++    [
++      "Connect a model, interface and data source in an application.",
++      "Test a user workflow from input to result."
++    ],
++    [
++      "Identify risks in an AI feature.",
++      "Decide what to measure and monitor."
++    ],
++    [
++      "Define a user problem and a measurable outcome.",
++      "Use evidence to explain how a project meets its goal."
++    ]
++  ],
++  "python_intro": "Python is a language for writing instructions a computer can follow. A Python interpreter reads and runs those instructions. A file ending in .py saves them so you can run them again. People use Python to automate tasks, build web services, study data and work with AI. In this lab, Python runs the code, VS Code edits it, the terminal sends commands, and Git records changes.",
++  "steps": [
++    [
++      "Install Python on Windows",
++      "Open the official Python Windows page. Install the Python install manager or a supported Python 3 installer that matches your computer. If a traditional installer offers Add Python to PATH, select it. Open a new PowerShell window. Try python --version. If it opens the Store or fails, try py --version. Use the working command throughout the lab. See the Windows guide if neither works.",
++      "python --version\npy --version",
++      "At least one command reports Python 3 and a version number."
++    ],
++    [
++      "Set up VS Code and its Python extension",
++      "Run the official VS Code Windows installer. Open Extensions with Ctrl+Shift+X and install Python published by Microsoft. Press Ctrl+Shift+P, search for Python: Select Interpreter, and choose the Python 3 installation you checked.",
++      "",
++      "VS Code shows the Microsoft Python extension and the correct Python 3 interpreter."
++    ],
++    [
++      "Install Git",
++      "Use the official Git for Windows installer, then reopen the terminal. Git records changes so you can identify the exact version you submit later.",
++      "git --version",
++      "I can see a Git version in the terminal."
++    ],
++    [
++      "Find your way around the terminal",
++      "In VS Code choose Terminal, then New Terminal. Get-Location shows your current folder; Get-ChildItem lists its files; cd changes the folder. Run each line separately from a folder you can write to. If the practice folder already exists, skip mkdir.",
++      "mkdir saire-python-practice\ncd saire-python-practice\nGet-Location\nGet-ChildItem",
++      "The current location ends in saire-python-practice."
++    ],
++    [
++      "Write and run your first program",
++      "Open the practice folder in VS Code. Create hello.py, type the first line below into the file, and save it. Type the second line in the terminal, or use py hello.py if py is your working command. Expect Hello, Academy! Then change the message, save, and run it again.",
++      "print(\"Hello, Academy!\")\npython hello.py",
++      "I ran hello.py, saw the greeting, and ran it again after changing the text."
++    ],
++    [
++      "Verify the environment",
++      "Ask Python to show the interpreter path and compare it with VS Code. If the file is missing, check the terminal folder and make sure the name is not hello.py.txt. If you cannot install tools or need an accessible alternative, contact your instructor before starting a timed lesson. You can read and plan here without starting a timer.",
++      "python -c \"import sys; print(sys.executable)\"\nGet-ChildItem hello.py",
++      "I can find my interpreter and hello.py, or I have an agreed alternative."
++    ]
++  ],
++  "module_resources": [
++    [
++      "Python for Windows",
++      "https://www.python.org/downloads/windows/",
++      "Download a supported Python installation."
++    ],
++    [
++      "Python on Windows guide",
++      "https://docs.python.org/3/using/windows.html",
++      "Find official installation and troubleshooting guidance."
++    ],
++    [
++      "Download VS Code",
++      "https://code.visualstudio.com/download",
++      "Choose your editor installer."
++    ],
++    [
++      "Microsoft Python extension",
++      "https://marketplace.visualstudio.com/items?itemName=ms-python.python",
++      "Confirm the extension and publisher."
++    ],
++    [
++      "Python in VS Code",
++      "https://code.visualstudio.com/docs/python/python-tutorial",
++      "See how the editor, interpreter and terminal work together."
++    ],
++    [
++      "Install Git for Windows",
++      "https://git-scm.com/install/windows",
++      "Choose the installer for your PC."
++    ],
++    [
++      "Pro Git introduction",
++      "https://git-scm.com/book/en/v2/Getting-Started-What-is-Git%3F",
++      "Read why projects use version history."
++    ],
++    [
++      "Python virtual environments",
++      "https://docs.python.org/3/library/venv.html",
++      "Optional reading for projects that need their own packages."
++    ]
++  ],
++  "glossary": [
++    [
++      "Program",
++      "Saved instructions a computer can run.",
++      "hello.py tells Python to display a greeting."
++    ],
++    [
++      "Interpreter",
++      "The tool that reads and runs instructions in a language.",
++      "Python runs the steps in hello.py."
++    ],
++    [
++      "Terminal",
++      "A text window where you type commands and see their results.",
++      "Run git --version to see which Git you installed."
++    ],
++    [
++      "Command",
++      "An instruction you type for a program to run.",
++      "Get-Location asks PowerShell to show the current folder."
++    ],
++    [
++      "Variable",
++      "A name your program uses to refer to a value.",
++      "quantity = 3 gives the value 3 the name quantity."
++    ],
++    [
++      "String",
++      "A value made of text.",
++      "\"3\" is text. 3 is an integer."
++    ],
++    [
++      "Condition",
++      "A question with a true or false result that a program can act on.",
++      "quantity > 0 checks that the quantity is positive."
++    ],
++    [
++      "Loop",
++      "A way to repeat a step for several items or while a condition holds.",
++      "Print each item on a shopping list."
++    ],
++    [
++      "Function",
++      "A set of steps you can call when needed.",
++      "A total function can multiply price by quantity."
++    ],
++    [
++      "Test",
++      "A repeatable check against an expected result.",
++      "Two items costing 5 each should total 10."
++    ],
++    [
++      "Commit",
++      "A saved point in Git history that identifies one version of a project.",
++      "ProofLoop records the commit submitted for review."
++    ],
++    [
++      "Iteration",
++      "The time window for a graded lesson.",
++      "It starts when you choose Start 14-day lesson."
++    ],
++    [
++      "Formative check",
++      "A practice check that helps you decide what to review.",
++      "Compare your before and after checks for a lesson."
++    ]
++  ],
++  "lessons": [
++    {
++      "id": "p1-l1",
++      "guide": [
++        "A program is a sequence of instructions. Think of a recipe: ingredients are inputs, the steps do the work, and the finished dish is output.",
++        "Start with a price and a quantity. Multiplication does the work. print displays the answer.",
++        "price = 6\nquantity = 4\nprint(price * quantity)",
++        "Predict the result, then run the example. Change quantity to 2 and explain why the result changed.",
++        "Calculate the cost of two pencils priced at 3 each and a notebook priced at 8. Verify the total by hand.",
++        "A variable gives a value a name. Python looks up that value when the instruction runs."
++      ],
++      "resource": [
++        "Python introduction",
++        "https://docs.python.org/3/tutorial/introduction.html",
++        "Optional examples of numbers and text."
++      ],
++      "checks": [
++        [
++          "What does print(3 * 4) show?",
++          [
++            "7",
++            "12",
++            "34"
++          ],
++          1,
++          "Python multiplies 3 by 4 and displays 12."
++        ],
++        [
++          "What is the result displayed by a calculator called?",
++          [
++            "Input",
++            "An editor",
++            "Output"
++          ],
++          2,
++          "Output is what the program produces."
++        ]
++      ]
++    },
++    {
++      "id": "p1-l2",
++      "guide": [
++        "A value has a type that affects what Python can do with it. A price on a sign is text; the price in a calculation needs to be a number.",
++        "Quotes make \"4\" text. Convert it to an integer before adding 2.",
++        "quantity_text = \"4\"\nquantity = int(quantity_text)\nprint(quantity + 2)",
++        "Compare print(\"4\" + \"2\") with print(4 + 2). Write what each line does.",
++        "Ask for the number of books, convert the input to an integer, and show how many books there will be after adding three.",
++        "Try int(\"four\") separately. Read the last line of the error to find what Python could not convert."
++      ],
++      "resource": [
++        "Python errors and exceptions",
++        "https://docs.python.org/3/tutorial/errors.html",
++        "Optional help reading the last line of an error."
++      ],
++      "checks": [
++        [
++          "What type is \"5\"?",
++          [
++            "String",
++            "Integer",
++            "Boolean"
++          ],
++          0,
++          "Quotes make the value text."
++        ],
++        [
++          "Which converts \"5\" to a number?",
++          [
++            "print(\"5\")",
++            "int(\"5\")",
++            "\"5\" + \"0\""
++          ],
++          1,
++          "int converts valid integer text to a number."
++        ]
++      ]
++    },
++    {
++      "id": "p1-l3",
++      "guide": [
++        "A decision chooses which step runs. A loop repeats a step. A shop might check whether each item has a positive price before using it.",
++        "Visit each price in order. The indented print runs only if the price is greater than zero.",
++        "prices = [4, 0, 7]\nfor price in prices:\n    if price > 0:\n        print(price)",
++        "Predict which prices appear. Add -2 and 9, then explain which numbers were skipped.",
++        "Loop through a list of temperatures and display each one below zero. Test zero, a positive number and two negatives.",
++        "Indentation groups steps. Moving a line may change what repeats or depends on a condition."
++      ],
++      "resource": [
++        "Python control flow",
++        "https://docs.python.org/3/tutorial/controlflow.html",
++        "More examples of decisions and loops."
++      ],
++      "checks": [
++        [
++          "How many times does a for loop visit a three-item list?",
++          [
++            "Once",
++            "Three times",
++            "Until stopped"
++          ],
++          1,
++          "A for loop visits one item at a time."
++        ],
++        [
++          "Is 0 greater than 0?",
++          [
++            "Yes",
++            "Only in a loop",
++            "No"
++          ],
++          2,
++          "Greater than excludes an equal value."
++        ]
++      ]
++    },
++    {
++      "id": "p1-l4",
++      "guide": [
++        "A function groups steps so you can use them again with different inputs, like using the same measuring cup for different ingredients.",
++        "The total function takes a price and quantity. It returns a value the caller can use or test.",
++        "def total(price, quantity):\n    return price * quantity\n\nprint(total(5, 3))\nassert total(5, 0) == 0",
++        "Predict the printed result. Change the price and run again. Change the expected value in the assert once to see a failed check, then fix it.",
++        "Write delivery_cost to return the total for parcels costing 12 each. Add checks for zero, one and three parcels.",
++        "print displays a value. return passes it back to the caller, so a test can check it directly."
++      ],
++      "resource": [
++        "Defining functions in Python",
++        "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
++        "Optional details about parameters and return values."
++      ],
++      "checks": [
++        [
++          "Which keyword sends a value back to the caller?",
++          [
++            "for",
++            "return",
++            "if"
++          ],
++          1,
++          "return gives the caller a value."
++        ],
++        [
++          "Which test checks a boundary for a delivery charge?",
++          [
++            "Check zero parcels",
++            "Rename the file",
++            "Print the label twice"
++          ],
++          0,
++          "Zero checks the boundary where there is nothing to charge for."
++        ]
++      ]
++    }
++  ]
++}
+diff --git a/backend/courses/admin.py b/backend/courses/admin.py
+--- a/backend/courses/admin.py
++++ b/backend/courses/admin.py
+@@ -2,7 +2,10 @@
+ from django.contrib import admin
+ from django.urls import reverse
+ from django.utils.html import format_html
+-from .models import Course, Module, Topic, Lesson, LessonSection, QuizQuestion, Project
++from .models import (
++    Course, FormativeQuestion, GlossaryEntry, LearningResource, Lesson, LessonGuide,
++    LessonSection, Module, ModuleGuide, Project, QuizQuestion, SetupStep, Topic,
++)
+ 
+ 
+ class ModuleInline(admin.TabularInline):
+@@ -57,6 +60,17 @@
+     fields = ("position", "question", ("option_a", "option_b"), ("option_c", "option_d"), "correct", "reason")
+ 
+ 
++class LessonGuideInline(admin.StackedInline):
++    model = LessonGuide
++    extra = 0
++    max_num = 1
++
++
++class FormativeQuestionInline(admin.StackedInline):
++    model = FormativeQuestion
++    extra = 0
++
++
+ @admin.register(Lesson)
+ class LessonAdmin(admin.ModelAdmin):
+     list_display = ("title", "module", "position", "published", "minutes", "updated_at")
+@@ -66,7 +80,7 @@
+     list_editable = ("position", "published")
+     readonly_fields = ("public_id", "updated_at")
+     autocomplete_fields = ("module",)
+-    inlines = [SectionInline, QuizQuestionInline]
++    inlines = [LessonGuideInline, SectionInline, FormativeQuestionInline, QuizQuestionInline]
+     fieldsets = (("Lesson", {"fields": ("module", "title", "position", "public_id")}),
+                  ("Content", {"fields": ("objective", "challenge", "minutes", "difficulty")}),
+                  ("Publishing & assessment", {"fields": ("published", "passing_score", "updated_at")}))
+@@ -79,3 +93,31 @@
+     list_editable = ("position", "published")
+     search_fields = ("name",)
+     autocomplete_fields = ("module",)
++
++
++class SetupStepInline(admin.StackedInline):
++    model = SetupStep
++    extra = 0
++
++
++@admin.register(ModuleGuide)
++class ModuleGuideAdmin(admin.ModelAdmin):
++    list_display = ('title', 'module', 'published', 'required_setup', 'revision')
++    list_filter = ('published', 'required_setup')
++    search_fields = ('title', 'module__name')
++    autocomplete_fields = ('module',)
++    inlines = [SetupStepInline]
++
++
++@admin.register(LearningResource)
++class LearningResourceAdmin(admin.ModelAdmin):
++    list_display = ('title', 'module', 'lesson', 'url')
++    search_fields = ('title', 'url')
++    autocomplete_fields = ('module', 'lesson')
++
++
++@admin.register(GlossaryEntry)
++class GlossaryAdmin(admin.ModelAdmin):
++    list_display = ('term', 'published')
++    search_fields = ('term', 'definition')
++    list_filter = ('published',)
+diff --git a/backend/courses/foundations_v104.py b/backend/courses/foundations_v104.py
+new file mode 100644
+--- /dev/null
++++ b/backend/courses/foundations_v104.py
+@@ -0,0 +1,55 @@
++"""Versioned, additive seed data for v10.4. Keep this loader and its data stable."""
++import json
++from pathlib import Path
++
++DATA = Path(__file__).resolve().parents[1] / 'content' / 'academy_foundations_v104.json'
++COURSE = 'ai-engineer-agentic-systems'
++
++
++def add_foundation_guides(apps, database):
++    data = json.loads(DATA.read_text(encoding='utf-8'))
++    table = lambda name: apps.get_model('courses', name).objects.using(database)
++    modules = {
++        module.position: module for module in table('Module').filter(course__slug=COURSE)
++    }
++    if not modules:
++        return
++    for position, outcomes in enumerate(data['outcomes'], start=1):
++        module = modules.get(position)
++        if not module:
++            continue
++        python = position == 1
++        guide, created = table('ModuleGuide').get_or_create(module_id=module.pk, defaults={
++            'title': 'Getting Ready · Your first Python program' if python else f'Getting Ready · {module.name}',
++            'introduction': data['python_intro'] if python else 'Review these outcomes and use the checklist template to plan your setup.',
++            'outcomes': '\n'.join(outcomes),
++            'published': True,
++            'required_setup': python,
++            'first_program': python,
++        })
++        if python and created:
++            for index, (heading, instructions, command, verification) in enumerate(data['steps'], start=1):
++                table('SetupStep').create(guide_id=guide.pk, position=index, heading=heading,
++                                          instructions=instructions, command=command, verification=verification)
++            for index, (title, url, purpose) in enumerate(data['module_resources'], start=1):
++                table('LearningResource').get_or_create(module_id=module.pk, lesson_id=None, url=url, defaults={
++                    'title': title, 'purpose': purpose, 'position': index,
++                })
++    guide_fields = ('explanation', 'demonstration', 'example', 'guided_exercise',
++                    'independent_exercise', 'further_explanation')
++    for item in data['lessons']:
++        lesson = table('Lesson').filter(public_id=item['id'], module__course__slug=COURSE).first()
++        if not lesson:
++            continue
++        table('LessonGuide').get_or_create(lesson_id=lesson.pk, defaults=dict(zip(guide_fields, item['guide'])))
++        title, url, purpose = item['resource']
++        table('LearningResource').get_or_create(module_id=lesson.module_id, lesson_id=lesson.pk, url=url,
++                                               defaults={'title': title, 'purpose': purpose})
++        if not table('FormativeQuestion').filter(lesson_id=lesson.pk).exists():
++            for index, (prompt, options, correct, explanation) in enumerate(item['checks'], start=1):
++                table('FormativeQuestion').create(
++                    lesson_id=lesson.pk, position=index, prompt=prompt, option_a=options[0],
++                    option_b=options[1], option_c=options[2], correct=correct, explanation=explanation,
++                )
++    for term, definition, example in data['glossary']:
++        table('GlossaryEntry').get_or_create(term=term, defaults={'definition': definition, 'example': example})
+diff --git a/backend/courses/management/commands/seed_curriculum.py b/backend/courses/management/commands/seed_curriculum.py
+--- a/backend/courses/management/commands/seed_curriculum.py
++++ b/backend/courses/management/commands/seed_curriculum.py
+@@ -1,5 +1,7 @@
+ """Load the existing SAIRE-Linked curriculum into Django, without overwriting edits."""
+ import json
++from django.apps import apps
++from courses.foundations_v104 import add_foundation_guides
+ from pathlib import Path
+ from django.core.management.base import BaseCommand
+ from django.db import transaction
+@@ -69,6 +71,7 @@
+                     name=item["name"], description=item["description"],
+                     level=item["level"], skills_csv=", ".join(item["skills"]),
+                 )
++            add_foundation_guides(apps, course._state.db)
+         self.stdout.write(self.style.SUCCESS(
+             f"Seeded {course.title}: {len(modules)} phases, {len(data['lessons'])} lessons, {len(data['projects'])} projects"
+         ))
+diff --git a/backend/courses/migrations/0003_glossaryentry_formativequestion_learningresource_and_more.py b/backend/courses/migrations/0003_glossaryentry_formativequestion_learningresource_and_more.py
+new file mode 100644
+--- /dev/null
++++ b/backend/courses/migrations/0003_glossaryentry_formativequestion_learningresource_and_more.py
+@@ -0,0 +1,235 @@
++# Generated by Django 5.2.18 on 2026-11-05 13:55
++
++import django.core.validators
++import django.db.models.deletion
++from django.db import migrations, models
++
++
++class Migration(migrations.Migration):
++
++    dependencies = [
++        ("courses", "0002_foundations_checks"),
++    ]
++
++    operations = [
++        migrations.CreateModel(
++            name="GlossaryEntry",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("term", models.CharField(max_length=100, unique=True)),
++                ("definition", models.TextField()),
++                ("example", models.TextField(blank=True)),
++                ("published", models.BooleanField(default=True)),
++            ],
++            options={
++                "ordering": ["term"],
++            },
++        ),
++        migrations.CreateModel(
++            name="FormativeQuestion",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("position", models.PositiveSmallIntegerField(default=1)),
++                ("prompt", models.CharField(max_length=300)),
++                ("option_a", models.CharField(max_length=220)),
++                ("option_b", models.CharField(max_length=220)),
++                ("option_c", models.CharField(max_length=220)),
++                (
++                    "correct",
++                    models.PositiveSmallIntegerField(
++                        choices=[(0, "A"), (1, "B"), (2, "C")]
++                    ),
++                ),
++                ("explanation", models.CharField(max_length=500)),
++                (
++                    "lesson",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        related_name="formative_questions",
++                        to="courses.lesson",
++                    ),
++                ),
++            ],
++            options={
++                "ordering": ["position", "pk"],
++            },
++        ),
++        migrations.CreateModel(
++            name="LearningResource",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("title", models.CharField(max_length=180)),
++                (
++                    "url",
++                    models.URLField(
++                        validators=[
++                            django.core.validators.URLValidator(schemes=["https"])
++                        ]
++                    ),
++                ),
++                ("purpose", models.CharField(max_length=300)),
++                ("position", models.PositiveSmallIntegerField(default=1)),
++                (
++                    "lesson",
++                    models.ForeignKey(
++                        blank=True,
++                        null=True,
++                        on_delete=django.db.models.deletion.CASCADE,
++                        related_name="learning_resources",
++                        to="courses.lesson",
++                    ),
++                ),
++                (
++                    "module",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        related_name="learning_resources",
++                        to="courses.module",
++                    ),
++                ),
++            ],
++            options={
++                "ordering": ["position", "pk"],
++            },
++        ),
++        migrations.CreateModel(
++            name="LessonGuide",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("explanation", models.TextField()),
++                ("demonstration", models.TextField()),
++                (
++                    "example",
++                    models.TextField(
++                        blank=True, help_text="Optional plain-text code sample."
++                    ),
++                ),
++                ("guided_exercise", models.TextField()),
++                ("independent_exercise", models.TextField()),
++                ("further_explanation", models.TextField(blank=True)),
++                (
++                    "lesson",
++                    models.OneToOneField(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        related_name="guide",
++                        to="courses.lesson",
++                    ),
++                ),
++            ],
++        ),
++        migrations.CreateModel(
++            name="ModuleGuide",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("title", models.CharField(max_length=180)),
++                ("introduction", models.TextField()),
++                (
++                    "outcomes",
++                    models.TextField(
++                        help_text="One outcome per line. Start with an action the learner can demonstrate."
++                    ),
++                ),
++                ("published", models.BooleanField(default=False)),
++                ("required_setup", models.BooleanField(default=True)),
++                (
++                    "revision",
++                    models.PositiveSmallIntegerField(
++                        default=1,
++                        help_text="Increase when learners should redo the checklist.",
++                        validators=[django.core.validators.MinValueValidator(1)],
++                    ),
++                ),
++                (
++                    "first_program",
++                    models.BooleanField(
++                        default=False,
++                        help_text="This lab includes running a first program.",
++                    ),
++                ),
++                (
++                    "module",
++                    models.OneToOneField(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        related_name="guide",
++                        to="courses.module",
++                    ),
++                ),
++            ],
++        ),
++        migrations.CreateModel(
++            name="SetupStep",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("position", models.PositiveSmallIntegerField(default=1)),
++                ("heading", models.CharField(max_length=180)),
++                ("instructions", models.TextField()),
++                ("command", models.TextField(blank=True)),
++                (
++                    "verification",
++                    models.CharField(
++                        help_text="What the learner should confirm before ticking this step.",
++                        max_length=240,
++                    ),
++                ),
++                (
++                    "guide",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        related_name="steps",
++                        to="courses.moduleguide",
++                    ),
++                ),
++            ],
++            options={
++                "ordering": ["position", "pk"],
++            },
++        ),
++    ]
+diff --git a/backend/courses/migrations/0004_foundation_guides.py b/backend/courses/migrations/0004_foundation_guides.py
+new file mode 100644
+--- /dev/null
++++ b/backend/courses/migrations/0004_foundation_guides.py
+@@ -0,0 +1,11 @@
++from django.db import migrations
++from courses.foundations_v104 import add_foundation_guides
++
++
++def seed(apps, schema_editor):
++    add_foundation_guides(apps, schema_editor.connection.alias)
++
++
++class Migration(migrations.Migration):
++    dependencies = [('courses', '0003_glossaryentry_formativequestion_learningresource_and_more')]
++    operations = [migrations.RunPython(seed, migrations.RunPython.noop)]
+diff --git a/backend/courses/models.py b/backend/courses/models.py
+--- a/backend/courses/models.py
++++ b/backend/courses/models.py
+@@ -1,6 +1,7 @@
+ """Authorable curriculum models. All learner-facing content is public read-only."""
+ import uuid
+-from django.core.validators import MinValueValidator
++from django.core.exceptions import ValidationError
++from django.core.validators import MinValueValidator, URLValidator
+ from django.db import models
+ from django.utils.text import slugify
+ 
+@@ -135,3 +136,90 @@
+ 
+     def __str__(self):
+         return self.name
++
++
++class ModuleGuide(models.Model):
++    module = models.OneToOneField(Module, on_delete=models.CASCADE, related_name='guide')
++    title = models.CharField(max_length=180)
++    introduction = models.TextField()
++    outcomes = models.TextField(help_text='One outcome per line. Start with an action the learner can demonstrate.')
++    published = models.BooleanField(default=False)
++    required_setup = models.BooleanField(default=True)
++    revision = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1)],
++                                                help_text='Increase when learners should redo the checklist.')
++    first_program = models.BooleanField(default=False, help_text='This lab includes running a first program.')
++
++    def __str__(self):
++        return self.title
++
++
++class SetupStep(models.Model):
++    guide = models.ForeignKey(ModuleGuide, on_delete=models.CASCADE, related_name='steps')
++    position = models.PositiveSmallIntegerField(default=1)
++    heading = models.CharField(max_length=180)
++    instructions = models.TextField()
++    command = models.TextField(blank=True)
++    verification = models.CharField(max_length=240, help_text='What the learner should confirm before ticking this step.')
++
++    class Meta:
++        ordering = ['position', 'pk']
++
++
++class LessonGuide(models.Model):
++    lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='guide')
++    explanation = models.TextField()
++    demonstration = models.TextField()
++    example = models.TextField(blank=True, help_text='Optional plain-text code sample.')
++    guided_exercise = models.TextField()
++    independent_exercise = models.TextField()
++    further_explanation = models.TextField(blank=True)
++
++    def __str__(self):
++        return str(self.lesson)
++
++
++class LearningResource(models.Model):
++    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='learning_resources')
++    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, null=True, blank=True, related_name='learning_resources')
++    title = models.CharField(max_length=180)
++    url = models.URLField(validators=[URLValidator(schemes=['https'])])
++    purpose = models.CharField(max_length=300)
++    position = models.PositiveSmallIntegerField(default=1)
++
++    class Meta:
++        ordering = ['position', 'pk']
++
++    def clean(self):
++        super().clean()
++        if self.lesson_id and self.lesson.module_id != self.module_id:
++            raise ValidationError({'lesson': 'Choose a lesson from this module.'})
++
++    def __str__(self):
++        return self.title
++
++
++class GlossaryEntry(models.Model):
++    term = models.CharField(max_length=100, unique=True)
++    definition = models.TextField()
++    example = models.TextField(blank=True)
++    published = models.BooleanField(default=True)
++
++    class Meta:
++        ordering = ['term']
++
++    def __str__(self):
++        return self.term
++
++
++class FormativeQuestion(models.Model):
++    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='formative_questions')
++    position = models.PositiveSmallIntegerField(default=1)
++    prompt = models.CharField(max_length=300)
++    option_a = models.CharField(max_length=220)
++    option_b = models.CharField(max_length=220)
++    option_c = models.CharField(max_length=220)
++    correct = models.PositiveSmallIntegerField(choices=[(0, 'A'), (1, 'B'), (2, 'C')])
++    explanation = models.CharField(max_length=500)
++
++    class Meta:
++        ordering = ['position', 'pk']
+diff --git a/backend/courses/serializers.py b/backend/courses/serializers.py
+--- a/backend/courses/serializers.py
++++ b/backend/courses/serializers.py
+@@ -22,9 +22,13 @@
+ def course_payload(course, user=None):
+     from django.contrib.auth.models import AnonymousUser
+     from progression.services import course_progress, admin_access
++    from progression.models import SetupCompletion
+     user = user or AnonymousUser()
+     is_admin = admin_access(user)
+     states, accessible_lessons = course_progress(user, course.pk)
++    completions = set(SetupCompletion.objects.filter(
++        learner=user, guide__module__course=course,
++    ).values_list('guide_id', 'revision')) if user.is_authenticated else set()
+     phases, lessons, projects = [], [], []
+     for module in course.modules.all():
+         if not module.published and not is_admin:
+@@ -36,7 +40,11 @@
+             if final and not final_project:
+                 final_project = {'slug': final.slug, 'title': final.title,
+                                  'pass_score': final.module_pass_score, 'status': 'ready'}
+-        phases.append({'id': module.position, 'name': module.name, 'duration': module.duration_weeks,
++        guide = getattr(module, 'guide', None)
++        required = bool(guide and guide.published and guide.required_setup)
++        phases.append({'setup_required': required,
++            'setup_complete': not required or (guide.pk, guide.revision) in completions,
++            'id': module.position, 'module_id': module.pk, 'name': module.name, 'duration': module.duration_weeks,
+             'category': module.category, 'desc': module.description, 'icon': module.icon,
+             'topics': [t.text for t in module.topics.all()], 'project': 'Module milestone',
+             'progress': {**progress, 'status': 'admin_preview' if is_admin else progress['status'],
+diff --git a/backend/courses/views.py b/backend/courses/views.py
+--- a/backend/courses/views.py
++++ b/backend/courses/views.py
+@@ -31,7 +31,7 @@
+ @api_view(["GET"])
+ @permission_classes([AllowAny])
+ def course_detail(request, slug):
+-    module_query = Module.objects.order_by("position", "pk").prefetch_related(
++    module_query = Module.objects.select_related("guide").order_by("position", "pk").prefetch_related(
+         "topics",
+         Prefetch("lessons", queryset=Lesson.objects.order_by("position", "pk").prefetch_related("sections", "quiz_questions")),
+         Prefetch("projects", queryset=Project.objects.order_by("position", "pk")),
+diff --git a/backend/mentoring/api.py b/backend/mentoring/api.py
+--- a/backend/mentoring/api.py
++++ b/backend/mentoring/api.py
+@@ -12,14 +12,17 @@
+ from .provider import MentorProviderError, build_learning_context, configured_provider, make_socratic_reply, twin_context_enabled
+ 
+ 
++from progression.policy import MENTOR_DAILY_RATE, MENTOR_HOURLY_RATE
++
++
+ class MentorBurstThrottle(UserRateThrottle):
+     scope = 'mentor_burst'
+-    rate = '8/hour'
++    rate = MENTOR_HOURLY_RATE
+ 
+ 
+ class MentorDailyThrottle(UserRateThrottle):
+     scope = 'mentor_daily'
+-    rate = '40/day'
++    rate = MENTOR_DAILY_RATE
+ 
+ 
+ def serialize(message):
+diff --git a/backend/progression/academy_api.py b/backend/progression/academy_api.py
+new file mode 100644
+--- /dev/null
++++ b/backend/progression/academy_api.py
+@@ -0,0 +1,245 @@
++"""Authenticated orientation and study tools. None of these endpoints starts a timer."""
++from collections.abc import Mapping
++from datetime import timedelta
++
++from django.conf import settings
++from django.contrib.auth import get_user_model
++from django.db import transaction
++from django.db.models import F
++from django.shortcuts import get_object_or_404
++from django.utils import timezone
++from rest_framework.decorators import api_view, permission_classes
++from rest_framework.exceptions import PermissionDenied, ValidationError
++from rest_framework.permissions import IsAuthenticated
++from rest_framework.response import Response
++
++from assessments.models import Assignment, CodeReview
++from courses.models import GlossaryEntry, Module
++from .api import lesson_for
++from .models import FormativeCheck, LessonIteration, MistakeNote, OrientationAcknowledgment, SetupCompletion
++from .policy import LESSON_DAYS, MENTOR_DAILY_RATE, MENTOR_HOURLY_RATE, SUPPLEMENTARY_DAYS, orientation_state
++from .services import admin_access, can_access
++
++SETUP_TEMPLATE = [
++    'Identify what the language or runtime does and which operating systems are supported.',
++    'Find the official installation instructions, supported version, editor and any required extension.',
++    'Confirm the runtime and version in a terminal. Record the command and the output you expect.',
++    'Run one small starter program or tool command. Compare what you saw with the expected result.',
++    'Write down one fix for common setup errors and an alternative if you cannot install software.',
++]
++
++
++def _resource_data(resources):
++    return list(resources.filter(url__startswith='https://').values('title', 'url', 'purpose'))
++
++
++def lesson_enrichment(lesson):
++    guide = getattr(lesson, 'guide', None)
++    return {
++        'guide': {name: getattr(guide, name) for name in (
++            'explanation', 'demonstration', 'example', 'guided_exercise', 'independent_exercise', 'further_explanation',
++        )} if guide else None,
++        'resources': _resource_data(lesson.learning_resources.all()),
++    }
++
++
++def _object(request):
++    if not isinstance(request.data, Mapping):
++        raise ValidationError({'detail': 'Send a JSON object.'})
++    return request.data
++
++
++@api_view(['GET', 'POST'])
++@permission_classes([IsAuthenticated])
++def orientation(request):
++    state = orientation_state(request.user)
++    if request.method == 'POST':
++        data = _object(request)
++        if data.get('version') != state['version'] or data.get('accept') is not True:
++            raise ValidationError({'detail': 'Open the current Handbook and confirm that you have read the rules.'})
++        OrientationAcknowledgment.objects.get_or_create(learner=request.user, version=state['version'])
++        state['acknowledged'] = True
++    return Response(state)
++
++
++@api_view(['GET'])
++@permission_classes([IsAuthenticated])
++def handbook(request):
++    return Response({
++        'orientation': orientation_state(request.user),
++        'lesson_days': LESSON_DAYS,
++        'supplementary_days': SUPPLEMENTARY_DAYS,
++        'grade_cap': settings.SAIRE_SUPPLEMENTARY_GRADE_CAP,
++        'mentor_hourly': MENTOR_HOURLY_RATE,
++        'mentor_daily': MENTOR_DAILY_RATE,
++        'support_email': settings.SAIRE_SUPPORT_EMAIL,
++    })
++
++
++@api_view(['GET', 'POST'])
++@permission_classes([IsAuthenticated])
++def setup(request, module_id):
++    modules = Module.objects.select_related('course', 'guide')
++    if not admin_access(request.user):
++        modules = modules.filter(published=True, course__status='published')
++    module = get_object_or_404(modules, pk=module_id)
++    guide = getattr(module, 'guide', None)
++    if guide and not guide.published:
++        guide = None
++    steps = list(guide.steps.values('id', 'heading', 'instructions', 'command', 'verification')) if guide else []
++    revision = guide.revision if guide else None
++    completed = bool(guide and SetupCompletion.objects.filter(
++        learner=request.user, guide=guide, revision=revision,
++    ).exists())
++    if request.method == 'POST':
++        data = _object(request)
++        ids = data.get('checked')
++        if not steps or data.get('revision') != revision:
++            raise ValidationError({'detail': 'Reload the published setup checklist before confirming.'})
++        if not isinstance(ids, list) or any(type(item) is not int for item in ids) or set(ids) != {step['id'] for step in steps}:
++            raise ValidationError({'detail': 'Confirm each verification step before completing setup.'})
++        SetupCompletion.objects.get_or_create(learner=request.user, guide=guide, revision=revision)
++        completed = True
++    return Response({
++        'title': guide.title if guide else f'Getting Ready · {module.name}',
++        'introduction': guide.introduction if guide else 'Use this checklist to plan your setup while the module lab is being prepared.',
++        'outcomes': [line.strip() for line in guide.outcomes.splitlines() if line.strip()] if guide else [],
++        'revision': revision,
++        'required': bool(guide and guide.required_setup),
++        'completed': completed,
++        'steps': steps,
++        'template': SETUP_TEMPLATE if not steps else [],
++        'resources': _resource_data(module.learning_resources.filter(lesson__isnull=True)),
++        'final_project': Assignment.objects.filter(
++            module=module, published=True, module_pass_score__isnull=False,
++        ).values('title', 'duration_days', 'module_pass_score').first(),
++    })
++
++
++def _check_record(check):
++    return {'correct': check.correct, 'total': check.total, 'checked_at': check.checked_at}
++
++
++@api_view(['GET', 'POST'])
++@permission_classes([IsAuthenticated])
++def formative(request, public_id, stage):
++    if stage not in ('before', 'after'):
++        raise ValidationError({'detail': 'Choose a before or after check.'})
++    lesson = lesson_for(request.user, public_id)
++    if not can_access(request.user, lesson):
++        raise PermissionDenied('Unlock the lesson before taking its practice checks.')
++    questions = list(lesson.formative_questions.all())
++    attempts = LessonIteration.objects.filter(learner=request.user, lesson=lesson)
++
++    def get_checks():
++        return {check.stage: _check_record(check) for check in FormativeCheck.objects.filter(
++            learner=request.user, lesson=lesson,
++        )}
++
++    if request.method == 'GET':
++        started = attempts.exists()
++        allowed = not started if stage == 'before' else started
++        if stage == 'after' and not started and not admin_access(request.user):
++            raise PermissionDenied('Open the lesson before taking its after check.')
++        return Response({
++            'questions': [{'id': q.pk, 'prompt': q.prompt, 'options': [q.option_a, q.option_b, q.option_c]} for q in questions],
++            'can_answer': bool(questions and (allowed or admin_access(request.user))),
++            'results': get_checks(),
++        })
++
++    data = _object(request)
++    answers = data.get('answers')
++    if not questions or data.get('question_ids') != [q.pk for q in questions]:
++        raise ValidationError({'detail': 'Reload the current practice questions.'})
++    if not isinstance(answers, list) or len(answers) != len(questions) or any(type(a) is not int or a not in range(3) for a in answers):
++        raise ValidationError({'detail': 'Choose one option for each question.'})
++    feedback = [
++        {'correct': answer == q.correct, 'explanation': q.explanation}
++        for q, answer in zip(questions, answers)
++    ]
++    with transaction.atomic():
++        get_user_model().objects.select_for_update().get(pk=request.user.pk)
++        started = attempts.exists()
++        if stage == 'before' and started and not admin_access(request.user):
++            raise PermissionDenied('Your before check closes when the timed lesson starts.')
++        if stage == 'after' and not started and not admin_access(request.user):
++            raise PermissionDenied('Open the lesson before taking its after check.')
++        FormativeCheck.objects.update_or_create(
++            learner=request.user, lesson=lesson, stage=stage,
++            defaults={'correct': sum(item['correct'] for item in feedback), 'total': len(questions)},
++        )
++    return Response({'results': get_checks(), 'feedback': feedback})
++
++
++def _note_data(note):
++    return {key: getattr(note, key) for key in ('id', 'title', 'mistake', 'correction', 'updated_at')}
++
++
++@api_view(['GET', 'POST'])
++@permission_classes([IsAuthenticated])
++def notes(request):
++    entries = MistakeNote.objects.filter(learner=request.user)
++    if request.method == 'GET':
++        return Response([_note_data(note) for note in entries])
++    data = _object(request)
++    action = data.get('action')
++    if action not in ('save', 'delete'):
++        raise ValidationError({'detail': 'Choose to save or delete a note.'})
++    note_id = data.get('id')
++    if note_id is not None and (type(note_id) is not int or note_id < 1):
++        raise ValidationError({'detail': 'Invalid note ID.'})
++    if action == 'delete':
++        get_object_or_404(entries, pk=note_id).delete()
++        return Response({'deleted': True})
++    fields = {}
++    for field, limit in [('title', 100), ('mistake', 1500), ('correction', 1500)]:
++        value = data.get(field, '')
++        if not isinstance(value, str) or len(value) > limit or (field != 'correction' and not value.strip()):
++            raise ValidationError({'detail': f'Enter {field} text up to {limit} characters.'})
++        fields[field] = value.strip()
++    if note_id is not None:
++        note = get_object_or_404(entries, pk=note_id)
++        for name, value in fields.items():
++            setattr(note, name, value)
++        note.save(update_fields=[*fields, 'updated_at'])
++    else:
++        with transaction.atomic():
++            get_user_model().objects.select_for_update().get(pk=request.user.pk)
++            if entries.count() >= 100:
++                raise ValidationError({'detail': 'Your notebook holds 100 notes. Delete an old note to add another.'})
++            note = entries.create(learner=request.user, **fields)
++    return Response(_note_data(note))
++
++
++@api_view(['GET'])
++@permission_classes([IsAuthenticated])
++def study_tools(request):
++    user = request.user
++    published = dict(lesson__published=True, lesson__module__published=True, lesson__module__course__status='published')
++    suggestions = {}
++    misses = FormativeCheck.objects.filter(
++        learner=user, stage='after', correct__lt=F('total'), **published,
++    ).select_related('lesson').order_by('-checked_at')[:6]
++    for check in misses:
++        suggestions[check.lesson_id] = {
++            'lesson': check.lesson.title,
++            'reason': f'Your after check was {check.correct}/{check.total}. Rework an example, then try the check again.',
++        }
++    past_passes = LessonIteration.objects.filter(
++        learner=user, status='passed', completed_at__lte=timezone.now() - timedelta(days=3), **published,
++    ).select_related('lesson').order_by('completed_at')[:6]
++    for attempt in past_passes:
++        suggestions.setdefault(attempt.lesson_id, {
++            'lesson': attempt.lesson.title,
++            'reason': 'You passed this lesson at least three days ago. Explain the main idea from memory, then compare it with your notes.',
++        })
++    achievements = []
++    if SetupCompletion.objects.filter(learner=user, guide__first_program=True).exists():
++        achievements.append({'title': 'First program', 'evidence': 'You confirmed the first program ran in your setup checklist.'})
++    if CodeReview.objects.filter(submission__attempt__learner=user).exists():
++        achievements.append({'title': 'First reviewed challenge', 'evidence': 'An instructor recorded a review of your submitted project.'})
++    return Response({
++        'glossary': list(GlossaryEntry.objects.filter(published=True).values('term', 'definition', 'example')),
++        'revision': list(suggestions.values())[:8],
++        'achievements': achievements,
++    })
+diff --git a/backend/progression/api.py b/backend/progression/api.py
+--- a/backend/progression/api.py
++++ b/backend/progression/api.py
+@@ -14,6 +14,7 @@
+ from rest_framework.throttling import UserRateThrottle
+ from courses.models import Lesson
+ from .models import LessonIteration
++from .policy import SUPPLEMENTARY_DAYS, orientation_state
+ from .services import begin, can_access, credit, expire, iteration_data, admin_access
+ 
+ 
+@@ -45,6 +46,7 @@
+     passed = sum(i.status == 'passed' for i in rows)
+     return Response({'username': request.user.get_username(), 'admin': admin_access(request.user),
+         'server_now': timezone.now().isoformat(), 'passed': passed,
++        'orientation': orientation_state(request.user),
+         'quote': ['Small steps, repeated with care, become engineering skill.',
+                   'A failing test is a clue. Follow it.', 'Build one thing you can explain today.'][passed % 3],
+         'badges': (['First proof'] if passed else []) + (['Building momentum'] if passed >= 3 else []),
+@@ -56,6 +58,7 @@
+ @api_view(['GET'])
+ @permission_classes([IsAuthenticated])
+ def detail(request, public_id):
++    from .academy_api import lesson_enrichment
+     lesson = lesson_for(request.user, public_id)
+     if not can_access(request.user, lesson):
+         raise PermissionDenied('Lesson locked.')
+@@ -64,6 +67,7 @@
+         raise PermissionDenied('Start the lesson to open its content and begin the 14-day iteration.')
+     return Response({'id': lesson.public_id, 'title': lesson.title, 'objective': lesson.objective,
+         'challenge': lesson.challenge, 'iteration': iteration_data(i),
++        **lesson_enrichment(lesson),
+         'sections': list(lesson.sections.values('heading', 'body', 'code', 'language', 'note')),
+         'quiz': [{'id': q.pk, 'question': q.question, 'answers': [q.option_a, q.option_b, q.option_c, q.option_d]} for q in lesson.quiz_questions.all()],
+         'passing_count': lesson.passing_score or (lesson.quiz_questions.count() * 3 + 3) // 4})
+@@ -95,7 +99,7 @@
+             if i.status != 'failed':
+                 raise PermissionDenied('A supplementary attempt is available only after the original deadline and before day 21.')
+             i.supplementary_started_at = timezone.now()
+-            i.supplementary_due_at = i.due_at + timedelta(days=7)
++            i.supplementary_due_at = i.due_at + timedelta(days=SUPPLEMENTARY_DAYS)
+             i.status = 'supplementary'
+             i.save()
+         elif action == 'submit':
+diff --git a/backend/progression/migrations/0002_mistakenote_formativecheck_orientationacknowledgment_and_more.py b/backend/progression/migrations/0002_mistakenote_formativecheck_orientationacknowledgment_and_more.py
+new file mode 100644
+--- /dev/null
++++ b/backend/progression/migrations/0002_mistakenote_formativecheck_orientationacknowledgment_and_more.py
+@@ -0,0 +1,158 @@
++# Generated by Django 5.2.18 on 2026-11-05 13:55
++
++import django.db.models.deletion
++from django.conf import settings
++from django.db import migrations, models
++
++
++class Migration(migrations.Migration):
++
++    dependencies = [
++        ("courses", "0003_glossaryentry_formativequestion_learningresource_and_more"),
++        ("progression", "0001_initial"),
++        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
++    ]
++
++    operations = [
++        migrations.CreateModel(
++            name="MistakeNote",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("title", models.CharField(max_length=100)),
++                ("mistake", models.TextField()),
++                ("correction", models.TextField(blank=True)),
++                ("updated_at", models.DateTimeField(auto_now=True)),
++                (
++                    "learner",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        to=settings.AUTH_USER_MODEL,
++                    ),
++                ),
++            ],
++            options={
++                "ordering": ["-updated_at", "-pk"],
++            },
++        ),
++        migrations.CreateModel(
++            name="FormativeCheck",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                (
++                    "stage",
++                    models.CharField(
++                        choices=[("before", "Before"), ("after", "After")], max_length=6
++                    ),
++                ),
++                ("correct", models.PositiveSmallIntegerField()),
++                ("total", models.PositiveSmallIntegerField()),
++                ("checked_at", models.DateTimeField(auto_now=True)),
++                (
++                    "learner",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        to=settings.AUTH_USER_MODEL,
++                    ),
++                ),
++                (
++                    "lesson",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE, to="courses.lesson"
++                    ),
++                ),
++            ],
++            options={
++                "constraints": [
++                    models.UniqueConstraint(
++                        fields=("learner", "lesson", "stage"),
++                        name="one_formative_check_per_stage",
++                    )
++                ],
++            },
++        ),
++        migrations.CreateModel(
++            name="OrientationAcknowledgment",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("version", models.CharField(max_length=60)),
++                ("acknowledged_at", models.DateTimeField(auto_now_add=True)),
++                (
++                    "learner",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        to=settings.AUTH_USER_MODEL,
++                    ),
++                ),
++            ],
++            options={
++                "constraints": [
++                    models.UniqueConstraint(
++                        fields=("learner", "version"),
++                        name="one_acknowledgment_per_version",
++                    )
++                ],
++            },
++        ),
++        migrations.CreateModel(
++            name="SetupCompletion",
++            fields=[
++                (
++                    "id",
++                    models.BigAutoField(
++                        auto_created=True,
++                        primary_key=True,
++                        serialize=False,
++                        verbose_name="ID",
++                    ),
++                ),
++                ("revision", models.PositiveSmallIntegerField()),
++                ("completed_at", models.DateTimeField(auto_now_add=True)),
++                (
++                    "guide",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        to="courses.moduleguide",
++                    ),
++                ),
++                (
++                    "learner",
++                    models.ForeignKey(
++                        on_delete=django.db.models.deletion.CASCADE,
++                        to=settings.AUTH_USER_MODEL,
++                    ),
++                ),
++            ],
++            options={
++                "constraints": [
++                    models.UniqueConstraint(
++                        fields=("learner", "guide", "revision"),
++                        name="one_setup_completion_per_revision",
++                    )
++                ],
++            },
++        ),
++    ]
+diff --git a/backend/progression/models.py b/backend/progression/models.py
+--- a/backend/progression/models.py
++++ b/backend/progression/models.py
+@@ -22,3 +22,45 @@
+     class Meta:
+         constraints = [models.UniqueConstraint(fields=['learner', 'lesson'], name='unique_learner_lesson_iteration')]
+ 
++
++
++class OrientationAcknowledgment(models.Model):
++    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
++    version = models.CharField(max_length=60)
++    acknowledged_at = models.DateTimeField(auto_now_add=True)
++
++    class Meta:
++        constraints = [models.UniqueConstraint(fields=['learner', 'version'], name='one_acknowledgment_per_version')]
++
++
++class SetupCompletion(models.Model):
++    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
++    guide = models.ForeignKey('courses.ModuleGuide', on_delete=models.CASCADE)
++    revision = models.PositiveSmallIntegerField()
++    completed_at = models.DateTimeField(auto_now_add=True)
++
++    class Meta:
++        constraints = [models.UniqueConstraint(fields=['learner', 'guide', 'revision'], name='one_setup_completion_per_revision')]
++
++
++class FormativeCheck(models.Model):
++    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
++    lesson = models.ForeignKey('courses.Lesson', on_delete=models.CASCADE)
++    stage = models.CharField(max_length=6, choices=[('before', 'Before'), ('after', 'After')])
++    correct = models.PositiveSmallIntegerField()
++    total = models.PositiveSmallIntegerField()
++    checked_at = models.DateTimeField(auto_now=True)
++
++    class Meta:
++        constraints = [models.UniqueConstraint(fields=['learner', 'lesson', 'stage'], name='one_formative_check_per_stage')]
++
++
++class MistakeNote(models.Model):
++    learner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
++    title = models.CharField(max_length=100)
++    mistake = models.TextField()
++    correction = models.TextField(blank=True)
++    updated_at = models.DateTimeField(auto_now=True)
++
++    class Meta:
++        ordering = ['-updated_at', '-pk']
+diff --git a/backend/progression/policy.py b/backend/progression/policy.py
+new file mode 100644
+--- /dev/null
++++ b/backend/progression/policy.py
+@@ -0,0 +1,30 @@
++"""Shared learner policy for the handbook and graded starts."""
++from django.conf import settings
++from rest_framework.exceptions import PermissionDenied
++
++from courses.models import ModuleGuide
++from .models import OrientationAcknowledgment, SetupCompletion
++
++LESSON_DAYS = 14
++SUPPLEMENTARY_DAYS = 7
++MENTOR_HOURLY_RATE = '8/hour'
++MENTOR_DAILY_RATE = '40/day'
++
++
++def orientation_state(user):
++    version = settings.SAIRE_ORIENTATION_VERSION
++    return {
++        'version': version,
++        'acknowledged': OrientationAcknowledgment.objects.filter(learner=user, version=version).exists(),
++    }
++
++
++def require_ready_to_start(user, module):
++    from .services import admin_access
++    if admin_access(user):
++        return
++    if not orientation_state(user)['acknowledged']:
++        raise PermissionDenied('Read the Academy Handbook and acknowledge the rules in Study Hub before starting.')
++    guide = ModuleGuide.objects.filter(module=module, published=True, required_setup=True).first()
++    if guide and not SetupCompletion.objects.filter(learner=user, guide=guide, revision=guide.revision).exists():
++        raise PermissionDenied('Complete this module’s Getting Ready checklist before starting.')
+diff --git a/backend/progression/services.py b/backend/progression/services.py
+--- a/backend/progression/services.py
++++ b/backend/progression/services.py
+@@ -6,6 +6,7 @@
+ from rest_framework.exceptions import PermissionDenied
+ from courses.models import Lesson, Module
+ from .models import LessonIteration
++from .policy import LESSON_DAYS, SUPPLEMENTARY_DAYS, require_ready_to_start
+ 
+ 
+ def admin_access(user):
+@@ -121,7 +122,7 @@
+         LessonIteration.objects.filter(pk=iteration.pk, status='active', due_at__lte=now).update(
+             status='failed', primary_failed_at=iteration.due_at, raw_score=0, credited_score=0)
+         iteration.refresh_from_db()
+-    end = iteration.supplementary_due_at or (iteration.due_at + timedelta(days=7))
++    end = iteration.supplementary_due_at or (iteration.due_at + timedelta(days=SUPPLEMENTARY_DAYS))
+     if iteration.status in ('failed', 'supplementary') and now >= end:
+         LessonIteration.objects.filter(pk=iteration.pk, status__in=['failed', 'supplementary']).update(
+             status='exhausted', raw_score=0, credited_score=0)
+@@ -133,8 +134,12 @@
+     if not can_access(user, lesson):
+         raise PermissionDenied('Pass earlier lessons and the final projects of earlier modules first.')
+     now = now or timezone.now()
++    existing = LessonIteration.objects.filter(learner=user, lesson=lesson).first()
++    if existing:
++        return expire(existing, now), False
++    require_ready_to_start(user, lesson.module)
+     iteration, created = LessonIteration.objects.get_or_create(learner=user, lesson=lesson, defaults={
+-        'started_at': now, 'due_at': now + timedelta(days=14),
++        'started_at': now, 'due_at': now + timedelta(days=LESSON_DAYS),
+         'grade_cap': settings.SAIRE_SUPPLEMENTARY_GRADE_CAP})
+     return expire(iteration, now), created
+ 
+diff --git a/backend/progression/test_academy.py b/backend/progression/test_academy.py
+new file mode 100644
+--- /dev/null
++++ b/backend/progression/test_academy.py
+@@ -0,0 +1,154 @@
++from datetime import timedelta
++
++from django.conf import settings
++from django.contrib.auth import get_user_model
++from django.core.cache import cache
++from django.core.management import call_command
++from django.test import TestCase, override_settings
++from django.utils import timezone
++from rest_framework.authtoken.models import Token
++
++from assessments.models import Assignment, AssignmentAttempt, CodeReview, Submission
++from courses.models import GlossaryEntry, Lesson, ModuleGuide
++from progression.models import LessonIteration
++
++
++class AcademyFoundationTests(TestCase):
++    @classmethod
++    def setUpTestData(cls):
++        call_command('seed_curriculum', verbosity=0)
++        cls.learner = get_user_model().objects.create_user('new-learner')
++        cls.other = get_user_model().objects.create_user('other-learner')
++        cls.lesson = Lesson.objects.get(public_id='p1-l1')
++        cls.setup_path = f'/api/v1/academy/modules/{cls.lesson.module_id}/setup/'
++        cls.start_path = '/api/v1/lessons/p1-l1/start/'
++
++    def setUp(self):
++        cache.clear()
++        self.client.force_login(self.learner)
++
++    def post(self, path, payload):
++        return self.client.post(path, payload, content_type='application/json')
++
++    def acknowledge(self):
++        return self.post('/api/v1/academy/orientation/', {
++            'version': settings.SAIRE_ORIENTATION_VERSION, 'accept': True,
++        })
++
++    def complete_setup(self):
++        setup = self.client.get(self.setup_path).json()
++        return self.post(self.setup_path, {
++            'revision': setup['revision'], 'checked': [step['id'] for step in setup['steps']],
++        })
++
++    def test_orientation_and_setup_are_independent_and_neither_starts_a_timer(self):
++        self.assertEqual(self.post(self.start_path, {}).status_code, 403)
++        self.assertEqual(self.post('/api/v1/academy/orientation/', {'version': 'stale', 'accept': True}).status_code, 400)
++        self.assertTrue(self.acknowledge().json()['acknowledged'])
++        self.assertEqual(self.post(self.start_path, {}).status_code, 403)
++        self.assertEqual(self.post(self.setup_path, {'revision': 1, 'checked': []}).status_code, 400)
++        self.assertTrue(self.complete_setup().json()['completed'])
++        self.assertFalse(LessonIteration.objects.exists())
++        self.assertEqual(self.post(self.start_path, {}).status_code, 201)
++        attempt = LessonIteration.objects.get()
++        self.assertEqual(attempt.due_at - attempt.started_at, timedelta(days=14))
++        with override_settings(SAIRE_ORIENTATION_VERSION='new-rules'):
++            self.assertFalse(self.client.get('/api/v1/academy/orientation/').json()['acknowledged'])
++            self.assertEqual(self.post(self.start_path, {}).status_code, 200)
++        self.assertEqual(LessonIteration.objects.count(), 1)
++
++    def test_setup_revision_requires_fresh_confirmation(self):
++        self.acknowledge()
++        self.complete_setup()
++        guide = ModuleGuide.objects.get(module=self.lesson.module)
++        guide.revision += 1
++        guide.save(update_fields=['revision'])
++        self.assertEqual(self.post(self.start_path, {}).status_code, 403)
++        self.assertFalse(self.client.get(self.setup_path).json()['completed'])
++        self.assertTrue(self.complete_setup().json()['completed'])
++        self.assertEqual(self.post(self.start_path, {}).status_code, 201)
++
++    def test_checks_are_private_untimed_and_supply_revision_evidence(self):
++        before = '/api/v1/academy/lessons/p1-l1/check/before/'
++        after = '/api/v1/academy/lessons/p1-l1/check/after/'
++        self.assertEqual(self.client.get(after).status_code, 403)
++        questions = self.client.get(before).json()['questions']
++        self.assertTrue(questions)
++        self.assertTrue(all('correct' not in question for question in questions))
++        payload = {'question_ids': [q['id'] for q in questions], 'answers': [0] * len(questions)}
++        self.assertEqual(self.post(before, payload).json()['results']['before']['correct'], 0)
++        self.assertFalse(LessonIteration.objects.exists())
++        self.acknowledge()
++        self.complete_setup()
++        self.post(self.start_path, {})
++        self.assertEqual(self.post(before, payload).status_code, 403)
++        self.assertEqual(self.post(after, payload).json()['results']['after']['correct'], 0)
++        self.assertEqual(LessonIteration.objects.get().status, 'active')
++        tools = self.client.get('/api/v1/academy/study-tools/').json()
++        self.assertIn('0/2', tools['revision'][0]['reason'])
++        self.assertEqual(tools['achievements'][0]['title'], 'First program')
++        self.client.force_login(self.other)
++        self.assertEqual(self.client.get(before).json()['results'], {})
++        self.assertFalse(self.client.get('/api/v1/academy/study-tools/').json()['achievements'])
++
++    def test_notebook_only_allows_owner_to_read_edit_and_delete(self):
++        path = '/api/v1/academy/notes/'
++        note = self.post(path, {'action': 'save', 'title': 'Loop error', 'mistake': 'Wrong endpoint'}).json()
++        self.client.force_login(self.other)
++        self.assertEqual(self.client.get(path).json(), [])
++        self.assertEqual(self.post(path, {'action': 'delete', 'id': note['id']}).status_code, 404)
++        self.client.force_login(self.learner)
++        changed = self.post(path, {'action': 'save', 'id': note['id'], 'title': 'Loop error',
++                                   'mistake': 'Wrong endpoint', 'correction': 'Check range'}).json()
++        self.assertEqual(changed['correction'], 'Check range')
++        self.assertTrue(self.post(path, {'action': 'delete', 'id': note['id']}).json()['deleted'])
++
++    def test_cli_start_uses_gates_and_review_records_supply_milestones(self):
++        module = self.lesson.module
++        now = timezone.now()
++        for lesson in module.lessons.all():
++            LessonIteration.objects.create(
++                learner=self.learner, lesson=lesson, status='passed',
++                started_at=now - timedelta(days=5), due_at=now + timedelta(days=9),
++                completed_at=now - timedelta(days=4),
++            )
++        assignment = Assignment.objects.create(
++            module=module, slug='test-cli', title='Test challenge', published=True,
++            q1='One', q2='Two', q3='Three', q4='Four', q5='Five',
++        )
++        token = Token.objects.create(user=self.learner)
++        path = '/api/v1/assignments/test-cli/start/'
++        headers = {'HTTP_AUTHORIZATION': f'Token {token.key}'}
++        self.assertEqual(self.client.post(path, **headers).status_code, 403)
++        self.acknowledge()
++        self.assertEqual(self.client.post(path, **headers).status_code, 403)
++        self.complete_setup()
++        self.assertEqual(self.client.post(path, **headers).status_code, 201)
++        submission = Submission.objects.create(
++            attempt=AssignmentAttempt.objects.get(assignment=assignment),
++            repository_url='https://github.com/test/project', commit_sha='a' * 40,
++        )
++        instructor = get_user_model().objects.create_superuser('reviewer')
++        CodeReview.objects.create(
++            submission=submission, reviewer=instructor,
++            verified_test_score=80, code_quality_score=80,
++            q1_score=8, q2_score=8, q3_score=8, q4_score=8, q5_score=8,
++        )
++        evidence = self.client.get('/api/v1/academy/study-tools/').json()
++        self.assertTrue(any('at least three days ago' in row['reason'] for row in evidence['revision']))
++        self.assertIn('First reviewed challenge', [badge['title'] for badge in evidence['achievements']])
++
++    def test_seed_preserves_authored_content_and_exposes_setup_templates(self):
++        from django.apps import apps
++        from courses.foundations_v104 import add_foundation_guides
++        entry = GlossaryEntry.objects.get(term='Program')
++        entry.definition = 'Instructor definition'
++        entry.save(update_fields=['definition'])
++        add_foundation_guides(apps, 'default')
++        entry.refresh_from_db()
++        self.assertEqual(entry.definition, 'Instructor definition')
++        second = ModuleGuide.objects.get(module__position=2, module__course=self.lesson.module.course)
++        setup = self.client.get(f'/api/v1/academy/modules/{second.module_id}/setup/').json()
++        self.assertTrue(setup['outcomes'])
++        self.assertTrue(setup['template'])
++        self.assertFalse(setup['required'])
+diff --git a/backend/progression/tests.py b/backend/progression/tests.py
+--- a/backend/progression/tests.py
++++ b/backend/progression/tests.py
+@@ -1,11 +1,12 @@
+ from datetime import timedelta, datetime, timezone as dt_timezone
+ from unittest.mock import patch
++from django.conf import settings
+ from django.contrib.auth import get_user_model
+ from django.test import TestCase, Client, override_settings
+ from django.utils import timezone
+ from courses.models import Course, Module, Lesson, LessonSection, QuizQuestion, Project
+ from assessments.models import Assignment, AssignmentAttempt, CodeReview, Submission
+-from .models import LessonIteration
++from .models import LessonIteration, OrientationAcknowledgment
+ from .services import begin, expire, credit
+ 
+ 
+@@ -30,6 +31,7 @@
+         from django.core.cache import cache
+         cache.clear()
+         self.client.force_login(self.user)
++        OrientationAcknowledgment.objects.create(learner=self.user, version=settings.SAIRE_ORIENTATION_VERSION)
+ 
+     def post(self, action, body=None, lesson='one'):
+         return self.client.post(f'/api/v1/lessons/{lesson}/{action}/', body or {}, content_type='application/json')
+@@ -228,6 +230,13 @@
+     def test_original_foundation_lessons_open_and_complete_in_order(self):
+         from django.core.management import call_command
+         call_command('seed_curriculum', verbosity=0)
++        module_id = Lesson.objects.get(public_id='p1-l1').module_id
++        path = f'/api/v1/academy/modules/{module_id}/setup/'
++        setup = self.client.get(path).json()
++        completed = self.client.post(path, {
++            'revision': setup['revision'], 'checked': [step['id'] for step in setup['steps']],
++        }, content_type='application/json')
++        self.assertTrue(completed.json()['completed'])
+         for number in range(1, 5):
+             lesson_id = f'p1-l{number}'
+             lesson = Lesson.objects.get(public_id=lesson_id)
+diff --git a/backend/progression/urls.py b/backend/progression/urls.py
+--- a/backend/progression/urls.py
++++ b/backend/progression/urls.py
+@@ -1,7 +1,13 @@
+ from django.urls import path
+-from . import api
++from . import academy_api, api
+ 
+ urlpatterns = [
++    path('academy/orientation/', academy_api.orientation),
++    path('academy/handbook/', academy_api.handbook),
++    path('academy/modules/<int:module_id>/setup/', academy_api.setup),
++    path('academy/lessons/<slug:public_id>/check/<str:stage>/', academy_api.formative),
++    path('academy/notes/', academy_api.notes),
++    path('academy/study-tools/', academy_api.study_tools),
+     path('auth/csrf/', api.csrf), path('auth/session-logout/', api.logout),
+     path('dashboard/', api.dashboard), path('lessons/<slug:public_id>/', api.detail),
+     path('lessons/<slug:public_id>/<str:action>/', api.action),
+diff --git a/components/AcademyHandbook.tsx b/components/AcademyHandbook.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/AcademyHandbook.tsx
+@@ -0,0 +1,97 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { api } from '@/lib/session-api';
++
++export type Orientation = {version: string; acknowledged: boolean};
++type Policy = {
++  orientation: Orientation;
++  lesson_days: number;
++  supplementary_days: number;
++  grade_cap: number;
++  mentor_hourly: string;
++  mentor_daily: string;
++  support_email: string;
++};
++
++function handbookEntries(policy: Policy) {
++  return [
++    {title: 'Getting Ready and lesson deadlines',
++      text: `Read and acknowledge the rules before starting new graded work. Finish your module’s required setup checklist. Setup, the tour and practice checks use no timed attempt. Starting a lesson gives you ${policy.lesson_days} days. Django uses its own clock. Reopening a lesson keeps the same deadline.`},
++    {title: 'Missed deadline and supplementary attempt',
++      text: `The first attempt fails when its deadline passes without a pass. You can begin one supplementary attempt until ${policy.supplementary_days} days after the original deadline. Starting it later leaves less time. Credited marks are capped at ${policy.grade_cap}% under the current configuration. The lesson uses the raw result to determine a pass. Existing attempts keep their saved cap.`},
++    {title: 'Module progression and project grading',
++      text: 'Pass the lessons in order and then pass the module’s final project. Getting Ready and the roadmap show the configured module pass mark. Project clocks start separately. ProofLoop weights are 50% verified tests, 30% code defence, 10% code quality and 10% deadline compliance. An instructor records the official review. Late deductions follow the assignment’s configured deadline policy.'},
++    {title: 'Project CLI commands and Git submission',
++      text: 'Install the CLI from the source tree. Use a password-enabled account. OAuth-only learners can use the browser Project lab, or ask the Academy about a password for CLI use. Replace PROJECT-SLUG with the value from saire list. Run test and submit in the project folder. Commit and push your changes to the approved GitHub repository first. The CLI submits the exact commit hash.',
++      code: 'python -m pip install -e ./tools\nsaire login --server http://127.0.0.1:8000/api/v1\nsaire list\nsaire start PROJECT-SLUG\nsaire test\nsaire submit PROJECT-SLUG\nsaire grade PROJECT-SLUG\nsaire logout'},
++    {title: 'Mentor and Code Defence practice',
++      text: `Live Mentor requests are limited to ${policy.mentor_hourly} and ${policy.mentor_daily} per learner. Try one small change before asking. Say what you expected, what happened, and what you need help with. Code Defence practice has its own 8/hour limit. Use the sharing controls before sending practice text to the AI provider. Your instructor and the graded rubric determine official marks.`},
++    {title: 'Academic integrity',
++      text: 'Submit your own work and be ready to explain it. Credit tutorials and permitted help. Use the Mentor for hints. Keep credentials, private code and personal information out of practice text. An instructor-approved worker verifies supported submissions independently.'},
++    {title: 'Late work, technical problems and accommodations',
++      text: 'Contact the Academy early. Include the lesson or project, deadline, when the problem started and the exact error, with private details removed. Ask about an accessible editor, text instructions, keyboard access or a reviewed timing arrangement. Support and timing arrangements are handled by the Academy directly.'},
++    {title: 'Administrator testing',
++      text: 'Django superusers can preview content and bypass orientation, setup and curriculum locks for testing. Use a normal learner account to test the progression rules. Staff accounts without superuser access follow the learner gates.'},
++  ];
++}
++
++export default function AcademyHandbook({ orientation, refresh }: {
++  orientation: Orientation; refresh: () => Promise<void>;
++}) {
++  const [policy, setPolicy] = useState<Policy | null>(null);
++  const [query, setQuery] = useState('');
++  const [confirm, setConfirm] = useState(false);
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState('');
++
++  useEffect(() => {
++    let active = true;
++    api<Policy>('/academy/handbook/').then(
++      data => { if (active) setPolicy(data); },
++      cause => { if (active) setError(cause.message); },
++    );
++    return () => { active = false; };
++  }, [orientation.version]);
++
++  async function acknowledge() {
++    if (!policy || !confirm || busy) return;
++    setBusy(true);
++    setError('');
++    try {
++      const accepted = await api<Orientation>('/academy/orientation/', {version: policy.orientation.version, accept: true});
++      setPolicy({...policy, orientation: accepted});
++      await refresh();
++    } catch (cause) {
++      setError(cause instanceof Error ? cause.message : 'Could not save acknowledgment.');
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  if (!policy) return <p role={error ? 'alert' : 'status'}>{error || 'Loading the handbook…'}</p>;
++  const entries = handbookEntries(policy).filter(entry =>
++    [entry.title, entry.text, entry.code].join(' ').toLowerCase().includes(query.trim().toLowerCase()));
++  return <>
++    <h2>Academy Handbook</h2>
++    <label className="study-label">Search rules and commands
++      <input type="search" value={query} onChange={event => setQuery(event.target.value)} />
++    </label>
++    <p role="status">{entries.length} sections</p>
++    {entries.map(entry => <section key={entry.title} className="study-panel">
++      <h3>{entry.title}</h3><p>{entry.text}</p>
++      {entry.code && <><pre><code>{entry.code}</code></pre><p>For a hosted installation, use your Academy’s HTTPS API address.</p></>}
++    </section>)}
++    <p>{policy.support_email ? <a href={`mailto:${policy.support_email}`}>Email Academy support</a>
++      : 'For help, use the contact channel provided by your instructor or Academy administrator.'}</p>
++    <form className="study-panel" onSubmit={event => { event.preventDefault(); void acknowledge(); }}>
++      <h3>Rules acknowledgment</h3>
++      {policy.orientation.acknowledged ? <p role="status">Acknowledged · {policy.orientation.version}</p> : <>
++        <label className="study-choice"><input type="checkbox" checked={confirm}
++          onChange={event => setConfirm(event.target.checked)} /> I have read this version of the Academy rules.</label>
++        <button className="btn btn-primary" disabled={!confirm || busy}>{busy ? 'Saving…' : 'Acknowledge rules'}</button>
++      </>}
++      {error && <p role="alert">{error}</p>}
++    </form>
++  </>;
++}
+diff --git a/components/AcademyHub.tsx b/components/AcademyHub.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/AcademyHub.tsx
+@@ -0,0 +1,104 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { api } from '@/lib/session-api';
++import AcademyHandbook, { type Orientation } from './AcademyHandbook';
++import AcademySetup, { type SetupModule } from './AcademySetup';
++import MistakesNotebook from './MistakesNotebook';
++import '@/app/academy-study.css';
++
++export type HubSection = 'welcome' | 'handbook' | 'setup' | 'glossary' | 'notebook' | 'revision';
++const tabs: [HubSection, string][] = [
++  ['welcome', 'Welcome tour'], ['handbook', 'Handbook'], ['setup', 'Getting Ready'],
++  ['glossary', 'Glossary'], ['notebook', 'Mistakes notebook'], ['revision', 'Revision and milestones'],
++];
++const tour = [
++  ['Get oriented', 'Read the Handbook and acknowledge the rules. You can replay this tour whenever you like.'],
++  ['Check your tools', 'Getting Ready explains what to install and how to check that it works. You can complete setup before any timed work.'],
++  ['Open My classroom', 'Choose the next unlocked lesson. Try the before check, then start the timed lesson when ready. Read, practise and finish the graded check.'],
++  ['Build and explain', 'Use Project lab to submit a commit and prepare a Code Defence. The instructor review decides whether the next module opens.'],
++  ['Review and ask for help', 'Use the notebook and revision suggestions. The Handbook explains support and accessibility options.'],
++];
++
++function WelcomeTour({ select }: {select: (section: HubSection) => void}) {
++  const [step, setStep] = useState<number | null>(0);
++  return <section className="study-panel">
++    <h2>Welcome to SAIRE Academy</h2>
++    {step === null ? <p>The tour is available here whenever you want a refresher.</p> :
++      <div aria-live="polite">
++        <p>Step {step + 1} of {tour.length}</p><h3>{tour[step][0]}</h3><p>{tour[step][1]}</p>
++      </div>}
++    <div className="study-actions">
++      {step === null ? <button className="btn btn-outline" onClick={() => setStep(0)}>Replay tour</button> : <>
++        <button className="btn btn-outline" disabled={step === 0} onClick={() => setStep(step - 1)}>Back</button>
++        <button className="btn btn-outline" onClick={() => setStep(step + 1 < tour.length ? step + 1 : null)}>
++          {step + 1 < tour.length ? 'Next tour step' : 'Finish tour'}
++        </button>
++        <button className="btn btn-outline" onClick={() => setStep(null)}>Skip tour</button>
++      </>}
++      <button className="btn btn-primary" onClick={() => select('handbook')}>Read the Handbook</button>
++    </div>
++  </section>;
++}
++
++type StudyTools = {
++  glossary: {term: string; definition: string; example: string}[];
++  revision: {lesson: string; reason: string}[];
++  achievements: {title: string; evidence: string}[];
++};
++
++function StudyEvidence({ glossary }: {glossary: boolean}) {
++  const [data, setData] = useState<StudyTools | null>(null);
++  const [query, setQuery] = useState('');
++  const [error, setError] = useState('');
++  useEffect(() => {
++    let active = true;
++    api<StudyTools>('/academy/study-tools/').then(
++      value => { if (active) setData(value); },
++      cause => { if (active) setError(cause.message); },
++    );
++    return () => { active = false; };
++  }, []);
++  if (!data) return <p role={error ? 'alert' : 'status'}>{error || 'Loading study tools…'}</p>;
++  if (glossary) {
++    const terms = data.glossary.filter(entry => [entry.term, entry.definition, entry.example].join(' ').toLowerCase().includes(query.trim().toLowerCase()));
++    return <>
++      <h2>Glossary</h2>
++      <label className="study-label">Search terms<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label>
++      <p role="status">{terms.length} terms</p>
++      <dl>{terms.map(entry => <div className="study-panel" key={entry.term}>
++        <dt><strong>{entry.term}</strong></dt><dd>{entry.definition}{entry.example && <p>{entry.example}</p>}</dd>
++      </div>)}</dl>
++    </>;
++  }
++  return <>
++    <h2>Revision and milestones</h2>
++    <section className="study-panel"><h3>What to revisit</h3>
++      {data.revision.length ? <ul>{data.revision.map(item => <li key={item.lesson}><strong>{item.lesson}</strong> · {item.reason}</li>)}</ul>
++        : <p>Complete a practice check or lesson to build evidence for suggestions.</p>}
++    </section>
++    <section className="study-panel"><h3>Your milestones</h3>
++      {data.achievements.length ? <ul>{data.achievements.map(item => <li key={item.title}><strong>{item.title}</strong> · {item.evidence}</li>)}</ul>
++        : <p>Confirm your first program in Getting Ready or complete a challenge review to earn a milestone.</p>}
++    </section>
++    <p>Try recalling one idea before reopening your notes. A small recall attempt shows you where to practise next.</p>
++  </>;
++}
++
++export default function AcademyHub({ section, select, modules, phase, orientation, refresh }: {
++  section: HubSection; select: (section: HubSection) => void; modules: SetupModule[];
++  phase?: number; orientation: Orientation; refresh: () => Promise<void>;
++}) {
++  return <section className="academy-study page-content">
++    <h1>Study Hub</h1>
++    <nav className="study-actions" aria-label="Study Hub">
++      {tabs.map(([id, label]) => <button key={id} className={`btn ${section === id ? 'btn-primary' : 'btn-outline'}`}
++        aria-pressed={section === id} onClick={() => select(id)}>{label}</button>)}
++    </nav>
++    {section === 'welcome' && <WelcomeTour select={select} />}
++    {section === 'handbook' && <AcademyHandbook orientation={orientation} refresh={refresh} />}
++    {section === 'setup' && <AcademySetup key={phase ?? 0} modules={modules} phase={phase} refresh={refresh} />}
++    {section === 'notebook' && <MistakesNotebook />}
++    {(section === 'glossary' || section === 'revision') && <StudyEvidence glossary={section === 'glossary'} />}
++  </section>;
++}
+diff --git a/components/AcademySetup.tsx b/components/AcademySetup.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/AcademySetup.tsx
+@@ -0,0 +1,96 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { api } from '@/lib/session-api';
++import { ResourceLinks, type Resource } from './LessonStudyTools';
++
++export type SetupModule = {id: number; name: string; module_id?: number};
++type Setup = {
++  title: string; introduction: string; outcomes: string[];
++  revision: number | null; required: boolean; completed: boolean;
++  steps: {id: number; heading: string; instructions: string; command: string; verification: string}[];
++  template: string[]; resources: Resource[];
++  final_project: {title: string; duration_days: number; module_pass_score: number} | null;
++};
++
++export default function AcademySetup({ modules, phase, refresh }: {
++  modules: SetupModule[]; phase?: number; refresh: () => Promise<void>;
++}) {
++  const available = modules.filter(module => module.module_id !== undefined);
++  const [id, setId] = useState(available.find(module => module.id === phase)?.module_id ?? available[0]?.module_id);
++  const [setup, setSetup] = useState<Setup | null>(null);
++  const [checked, setChecked] = useState<number[]>([]);
++  const [error, setError] = useState('');
++  const [busy, setBusy] = useState(false);
++
++  useEffect(() => {
++    if (id === undefined) return;
++    let active = true;
++    setSetup(null);
++    setChecked([]);
++    setError('');
++    api<Setup>(`/academy/modules/${id}/setup/`).then(
++      data => { if (active) setSetup(data); },
++      cause => { if (active) setError(cause.message); },
++    );
++    return () => { active = false; };
++  }, [id]);
++
++  async function complete() {
++    if (!setup || checked.length !== setup.steps.length || busy) return;
++    setBusy(true);
++    setError('');
++    try {
++      setSetup(await api<Setup>(`/academy/modules/${id}/setup/`, { revision: setup.revision, checked }));
++      await refresh();
++    } catch (cause) {
++      setError(cause instanceof Error ? cause.message : 'Could not save your setup checklist.');
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return <>
++    <h2>Getting Ready</h2>
++    <p>Install and check the tools before starting graded work. Your lesson timer starts separately.</p>
++    {id !== undefined && <label className="study-label">Choose a module
++      <select value={id} disabled={busy} onChange={event => setId(Number(event.target.value))}>
++        {available.map(module => <option key={module.module_id} value={module.module_id}>{module.name}</option>)}
++      </select>
++    </label>}
++    {error && <p role="alert">{error}</p>}
++    {!setup && !error && <p role="status">{id === undefined ? 'Choose a course with a published module.' : 'Loading the setup lab…'}</p>}
++    {setup && <>
++      <section className="study-panel">
++        <h3>{setup.title}</h3><p>{setup.introduction}</p>
++        <h4>What you’ll be able to do</h4>
++        {setup.outcomes.length ? <ul>{setup.outcomes.map(outcome => <li key={outcome}>{outcome}</li>)}</ul>
++          : <p>The author can add outcomes in Django Admin.</p>}
++        {setup.final_project && <p>Final project: {setup.final_project.title} · {setup.final_project.module_pass_score}% to pass · {setup.final_project.duration_days} days from project start.</p>}
++      </section>
++      <ResourceLinks links={setup.resources} />
++      {setup.template.length > 0 && <section className="study-panel">
++        <h3>Setup checklist template</h3><p>Use this plan until a module-specific lab is published.</p>
++        <ol>{setup.template.map(item => <li key={item}>{item}</li>)}</ol>
++      </section>}
++      {setup.steps.length > 0 && <form onSubmit={event => { event.preventDefault(); void complete(); }}>
++        {setup.steps.map((step, index) => <section className="study-panel" key={step.id}>
++          <h3>{index + 1}. {step.heading}</h3><p>{step.instructions}</p>
++          {step.command && <pre><code>{step.command}</code></pre>}
++          <label className="study-choice">
++            <input type="checkbox" checked={setup.completed || checked.includes(step.id)} disabled={setup.completed || busy}
++              onChange={event => {
++                const value = event.target.checked;
++                setChecked(current => value ? [...current, step.id] : current.filter(item => item !== step.id));
++              }} />
++            {step.verification}
++          </label>
++        </section>)}
++        {setup.completed ? <p role="status">Setup checklist complete. Open My classroom when you are ready.</p>
++          : <button className="btn btn-primary" disabled={busy || checked.length !== setup.steps.length}>
++            {busy ? 'Saving…' : 'Confirm my setup'}
++          </button>}
++      </form>}
++    </>}
++  </>;
++}
+diff --git a/components/LearningPlatform.tsx b/components/LearningPlatform.tsx
+--- a/components/LearningPlatform.tsx
++++ b/components/LearningPlatform.tsx
+@@ -1,7 +1,7 @@
+ "use client";
+ 
+ import { useEffect, useState } from "react";
+-import { AnimatePresence, motion } from "framer-motion";
++import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+ import {
+   ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, BookOpen, Bot, BrainCircuit, CalendarDays,
+   Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardCheck, Clock3, Code2,
+@@ -13,14 +13,18 @@
+ import { DEFAULT_COURSE_SLUG, demoCourse, type CmsLesson, type QuizQuestion } from "@/lib/lms-api";
+ 
+ import { api } from '@/lib/session-api';
++import AcademyHub, { type HubSection } from './AcademyHub';
++import { FormativePanel, GuidedLesson, ResourceLinks, type LessonGuide, type Resource } from './LessonStudyTools';
+ import type { LiveClassroom, Iteration } from './LiveLearningPlatform';
+ 
+ type LessonDetail = Pick<CmsLesson, 'id' | 'objective' | 'sections' | 'challenge'> & {
+   quiz: QuizQuestion[];
+   passing_count: number;
++  guide: LessonGuide | null;
++  resources: Resource[];
+ };
+ 
+-type View = "overview" | "roadmap" | "classroom" | "projects" | "planner" | "resources";
++type View = "overview" | "roadmap" | "classroom" | "projects" | "planner" | "resources" | "academy";
+ type Saved = { completed: string[]; notes: Record<string, string>; minutes: number[]; quizBest: number; quizBests: Record<string, number>; phase: number; lesson: string };
+ const STORAGE = "saire-linked-lms-v1"; // Original key retained for first-course progress migration.
+ const defaults: Saved = { completed: [], notes: {}, minutes: baseSchedule.map(d => d.minutes), quizBest: 0, quizBests: {}, phase: 1, lesson: "p1-l1" };
+@@ -44,7 +48,10 @@
+ function Stat({icon:Icon,value,label,note}: {icon:LucideIcon; value:string;label:string;note:string}) {return <div className="stat"><div className="stat-icon"><Icon size={19}/></div><strong>{value}</strong><span>{label}</span><small>{note}</small></div>}
+ 
+ export default function LearningPlatform({live}: {live?: LiveClassroom}) {
+- const [view,setView]=useState<View>("overview");
++ const [view,setView]=useState<View>(live && !live.admin && !live.orientation.acknowledged ? 'academy' : 'overview');
++ const [hubSection, setHubSection] = useState<HubSection>('welcome');
++ const [hubPhase, setHubPhase] = useState<number>();
++ const [textFirst, setTextFirst] = useState(false);
+  const course = live?.course ?? demoCourse;
+  const courseSlug = course.slug;
+  const catalog = live?.catalog ?? [];
+@@ -79,7 +86,14 @@
+    setHydrated(true);
+  },[storageKey]);
+  useEffect(() => {
+-   const requested = new URLSearchParams(window.location.search).get('view');
++   const params = new URLSearchParams(window.location.search);
++   const requested = params.get('view');
++   const section = params.get('section');
++   if (live && requested === 'academy') {
++     setView('academy');
++     if (section === 'handbook' || section === 'setup') setHubSection(section);
++   }
++   try { setTextFirst(localStorage.getItem('saire-text-first') === '1'); } catch { /* browser storage is optional */ }
+    if (requested === 'planner' || requested === 'resources') setView(requested);
+  }, []);
+  useEffect(()=>{if(hydrated){try{localStorage.setItem(storageKey,JSON.stringify(saved))}catch{/* storage may be disabled */}}},[saved,hydrated,storageKey]);
+@@ -136,6 +150,18 @@
+  const quizScore = quiz.reduce((sum,q,i)=>sum+(quizAnswers[i]===q.correct?1:0),0);
+  const nextLesson = selected && lessons.slice(lessons.indexOf(selected) + 1).find(lesson => !lesson.locked);
+  const activeModule = phases.find(phase => phase.id === currentLesson.phaseId);
++ const orientationRequired = Boolean(live && !live.admin && !live.orientation.acknowledged);
++ const setupRequired = Boolean(live && !live.admin && activeModule?.setup_required && !activeModule.setup_complete);
++ const openHub = (section: HubSection, phase?: number) => {
++   setHubSection(section);
++   setHubPhase(phase);
++   navigate('academy');
++ };
++ function toggleTextFirst() {
++   const next = !textFirst;
++   setTextFirst(next);
++   try { localStorage.setItem('saire-text-first', next ? '1' : '0'); } catch { /* browser storage is optional */ }
++ }
+  const projectLink = activeModule?.progress?.project_unlocked && activeModule.progress.final_project
+    ? `/assignments/?assignment=${encodeURIComponent(activeModule.progress.final_project.slug)}`
+    : null;
+@@ -183,8 +209,9 @@
+  function exportProgress(){const blob=new Blob([JSON.stringify({product:"SAIRE-Linked Digital Learning",exportedAt:new Date().toISOString(),...saved,completed},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="saire-learning-progress.json";link.click();URL.revokeObjectURL(url);setToast("Progress exported to a JSON backup.")}
+  function updateMinutes(i:number,value:number){setSaved(old=>({...old,minutes:old.minutes.map((v,j)=>i===j?value:v)}))}
+  const nav:[View,LucideIcon,string][]=[["overview",LayoutDashboard,"Overview"],["roadmap",Layers3,"Learning roadmap"],["classroom",BookOpen,"My classroom"],["projects",Rocket,"Project lab"],["planner",CalendarDays,"Study planner"],["resources",FileText,"Resource library"]];
++ if (live) nav.push(["academy", GraduationCap, "Study Hub"]);
+  const navLinks=<><div className="nav-label">YOUR LEARNING SPACE</div>{nav.map(([id,Icon,label])=><button type="button" key={id} className={`nav-link ${view===id?"active":""}`} onClick={()=>navigate(id)} aria-current={view===id?"page":undefined}><Icon size={18}/>{label}{view===id&&<span className="nav-active-dot"/>}</button>)}</>;
+- return <div className={`app-shell ${!sidebarOpen?"compact-sidebar":""}`}>
++ return <MotionConfig reducedMotion="user"><div className={`app-shell ${!sidebarOpen?"compact-sidebar":""} ${textFirst ? "text-first" : ""}`}>
+   <aside className={`sidebar ${menuOpen?"mobile-open":""}`} aria-label="Primary navigation">
+     <div className="sidebar-top"><Brand/><button className="icon-button mobile-close" onClick={()=>setMenuOpen(false)} aria-label="Close navigation"><X size={20}/></button></div>
+     <div className="sidebar-scroll"><nav>{navLinks}</nav><div className="sidebar-card"><div className="sidebar-card-top"><span className="pulse-dot"/> YOUR JOURNEY</div><div className="sidebar-card-title">Build skills.<br/><em>Build the future.</em></div><div className="sidebar-progress-meta"><span>Learning progress</span><b>{progress}%</b></div><ProgressBar value={progress}/><div className="sidebar-card-foot">{completedCount} of {lessons.length} published lessons complete</div></div><div className="sidebar-bottom-links"><a href="/assignments"><Terminal size={15}/> SAIRE ProofLoop · Coding Lab</a><a href="/assignments#learning-twin"><BrainCircuit size={15}/> Learning Twin · My Skills</a><a href="https://www.sairelinked.com" target="_blank" rel="noreferrer"><ArrowUpRight size={15}/> SAIRE-Linked Website</a><a href="https://www.sairelinked.com/packages/growth" target="_blank" rel="noreferrer"><ArrowUpRight size={15}/> Explore Growth Package</a>{live&&<button type="button" className="nav-link live-sidebar-signout" onClick={()=>void live.signOut().catch(()=>setToast("Could not sign out. Try again."))}>Sign out</button>}</div></div>
+@@ -202,9 +229,17 @@
+       {live?.refreshError && <div className="api-banner api-offline" role="alert">
+         {live.refreshError} <button className="btn btn-outline" onClick={()=>void live.refresh()}>Refresh progress</button>
+       </div>}
++      {live && <div className="study-actions study-top-tools">
++        <button className="btn btn-outline" aria-pressed={textFirst} onClick={toggleTextFirst}>Text-first mode {textFirst ? 'on' : 'off'}</button>
++        {orientationRequired && <button className="btn btn-outline" onClick={()=>openHub('handbook')}>Read and acknowledge rules</button>}
++      </div>}
+       <AnimatePresence mode="wait">
++      {view === 'academy' && live && <motion.div key="academy" {...motionProps}>
++        <AcademyHub section={hubSection} select={setHubSection} modules={phases} phase={hubPhase}
++          orientation={live.orientation} refresh={live.refresh} />
++      </motion.div>}
+       {view==="overview"&&<motion.div key="overview" {...motionProps} className="page-content">
+-        <div className="hero"><div className="hero-orb hero-orb-1"/><div className="hero-orb hero-orb-2"/><div className="hero-grid"/><div className="hero-content"><span className="hero-kicker"><Sparkles size={13}/> THE FUTURE IS ENGINEERED, NOT GUESSED <span>· 2026—2027</span></span><h1>Build the mind.<br/><span>Engineer the future.</span></h1><p>{course.description}</p><div className="hero-course-tag">NOW STUDYING · {course.title}</div><div className="hero-buttons"><button className="btn btn-primary" disabled={!suggested} onClick={()=>beginLesson()}><Play size={16} fill="currentColor"/>{completedCount?"Continue learning":"Start learning"}<ArrowRight size={17}/></button><button className="btn btn-ghost" onClick={()=>navigate("roadmap")}>Explore the roadmap <ArrowUpRight size={16}/></button></div><div className="hero-bottom"><span><CheckCircle2 size={15}/> Practical first</span><span><CheckCircle2 size={15}/> Real projects</span><span><CheckCircle2 size={15}/> Career focused</span></div></div><img className="hero-logo" src="/brand/saire-pcb.webp" alt="SAIRE-Linked circuit heart emblem"/><div className="hero-side-tag">SAIRE-Linked / DIGITAL LEARNING PLATFORM</div></div>
++        <div className="hero"><div className="hero-orb hero-orb-1"/><div className="hero-orb hero-orb-2"/><div className="hero-grid"/><div className="hero-content"><span className="hero-kicker"><Sparkles size={13}/> THE FUTURE IS ENGINEERED, NOT GUESSED <span>· 2026—2027</span></span><h1>Build the mind.<br/><span>Engineer the future.</span></h1><p>{course.description}</p><div className="hero-course-tag">NOW STUDYING · {course.title}</div><div className="hero-buttons"><button className="btn btn-primary" disabled={!suggested} onClick={()=>beginLesson()}><Play size={16} fill="currentColor"/>{completedCount?"Continue learning":"Start learning"}<ArrowRight size={17}/></button><button className="btn btn-ghost" onClick={()=>navigate("roadmap")}>Explore the roadmap <ArrowUpRight size={16}/></button></div><div className="hero-bottom"><span><CheckCircle2 size={15}/> Practical first</span><span><CheckCircle2 size={15}/> Real projects</span><span><CheckCircle2 size={15}/> Career focused</span></div></div>{!textFirst && <img className="hero-logo" src="/brand/saire-pcb.webp" alt="SAIRE-Linked circuit heart emblem"/>}<div className="hero-side-tag">SAIRE-Linked / DIGITAL LEARNING PLATFORM</div></div>
+         {catalog.length>1&&<section className="course-library"><div className="course-library-heading"><div><span className="eyebrow">SAIRE-Linked Academy</span><h2>Explore our courses</h2><p>New courses become available here when published in Django Admin.</p></div><span className="course-library-count">{catalog.length} COURSES AVAILABLE</span></div><div className="course-library-grid">{catalog.map(item=><button key={item.slug} className={`course-tile ${courseSlug===item.slug?"current":""}`} onClick={()=>live?.selectCourse(item.slug)}><div className="course-tile-top"><GraduationCap size={23}/><span>{item.phase_count} PHASES · {item.lesson_count} LESSONS</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="course-tile-bottom">{courseSlug===item.slug?"CURRENT COURSE":"EXPLORE COURSE"}<ArrowRight size={16}/></div></button>)}</div></section>}
+         <div className="stat-grid"><Stat icon={Layers3} value={String(phases.length)} label="Learning phases" note="Foundation to expert path"/><Stat icon={BookOpen} value={String(totalTopics)} label="Curriculum topics" note={`${lessons.length} tutorials published`}/><Stat icon={Rocket} value={String(projects.length)} label="Portfolio projects" note="Build real-world skills"/><Stat icon={Clock3} value={course.estimated_months} label="Learning timeframe" note="Flexible, competence-led"/></div>
+         <div className="split-section"><div className="section-main"><SectionHeading eyebrow="PICK UP WHERE YOU LEFT OFF" title="Your next step" description="Small, consistent steps lead to meaningful progress."/><div className="continue-card"><div className="continue-icon"><Terminal size={27}/></div><div className="continue-body"><Chip variant="green">PHASE {currentLesson.phaseId.toString().padStart(2,"0")} · CURRENT LESSON</Chip><h3>{currentLesson.title}</h3><p>{currentLesson.objective || "Open the classroom to begin or resume your next lesson."}</p><div className="lesson-meta"><span><Clock3 size={14}/>{currentLesson.minutes} min lesson</span><span><BookOpen size={14}/>{currentLesson.difficulty}</span></div></div><button className="circle-arrow" disabled={!selected} aria-label="Open current lesson" onClick={()=>beginLesson(currentLesson.id)}><ArrowUpRight size={23}/></button></div></div><div className="insight-card"><div className="insight-heading"><Lightbulb size={19}/><span>THE SAIRE APPROACH</span></div><h3>Understand first.<br/><em>Automate second.</em></h3><p>Master the underlying logic before relying on frameworks or AI tools. Strong foundations create engineers who can design, debug and lead.</p><button onClick={()=>navigate("planner")}>Plan your study week <ArrowRight size={16}/></button></div></div>
+@@ -224,7 +259,7 @@
+             {p.progress.project_unlocked && <a href={`/assignments/?assignment=${encodeURIComponent(p.progress.final_project.slug)}`}>Open project lab →</a>}
+           </> : live ? <p>Final project details will appear when published.</p>
+           : <button onClick={()=>setProjectOpen(projects.find(x=>x.phase===p.id)?.id??null)}>View project <ArrowUpRight size={15}/></button>}
+-          </div><div className="available-lessons"><h4>Lessons</h4>{phaseLessons.length?phaseLessons.map(l=><button key={l.id} disabled={l.locked||busy} onClick={()=>beginLesson(l.id)}><span>{l.locked?<LockKeyhole size={15}/>:completed.includes(l.id)?<CheckCircle2 size={17}/>:<Play size={15}/>}</span>{l.title}{l.locked?" · Locked":""}<ArrowRight size={15}/></button>):<p>This phase is fully mapped. Detailed lessons will be published progressively; the syllabus is not presented as completed teaching content.</p>}</div></div></div></div>}</div>}):<div className="empty-state">No phases match that search. Try a shorter keyword.</div>}</div>
++          </div><div className="available-lessons">{live && <button className="btn btn-outline" onClick={()=>openHub("setup",p.id)}>Getting Ready and outcomes <ArrowRight size={15}/></button>}<h4>Lessons</h4>{phaseLessons.length?phaseLessons.map(l=><button key={l.id} disabled={l.locked||busy} onClick={()=>beginLesson(l.id)}><span>{l.locked?<LockKeyhole size={15}/>:completed.includes(l.id)?<CheckCircle2 size={17}/>:<Play size={15}/>}</span>{l.title}{l.locked?" · Locked":""}<ArrowRight size={15}/></button>):<p>This phase is fully mapped. Detailed lessons will be published progressively; the syllabus is not presented as completed teaching content.</p>}</div></div></div></div>}</div>}):<div className="empty-state">No phases match that search. Try a shorter keyword.</div>}</div>
+       </motion.div>}
+       {view==="classroom"&&<motion.div key="classroom" {...motionProps} className="page-content classroom-page">
+         <div className="page-intro classroom-intro"><div className="eyebrow"><span className="eyebrow-dot"/> INTERACTIVE CLASSROOM</div><h1>Learn with <span>purpose.</span></h1><p>Read, experiment, review and apply. Your learning journey starts with real understanding.</p></div>
+@@ -235,7 +270,11 @@
+           {lessonError && <p role="alert">{lessonError}</p>}
+           {detailAvailable ? <p role="status">{lessonError ? 'Return to the overview and reopen the classroom to retry.' : 'Opening your lesson…'}</p> : <>
+             <p>Start when you’re ready. You’ll have 14 days to complete the lesson and its knowledge check.</p>
+-            <button className="btn btn-primary" disabled={busy} onClick={()=>void lessonAction('start')}>{busy?'Starting…':'Start 14-day lesson'}</button>
++            {orientationRequired && <button className="btn btn-outline" onClick={()=>openHub('handbook')}>Read and acknowledge the rules</button>}
++            {setupRequired && <button className="btn btn-outline" onClick={()=>openHub('setup',selected.phaseId)}>Complete Getting Ready</button>}
++            <FormativePanel key={selected.id} lesson={selected.id} stage="before" />
++            <button className="btn btn-primary" disabled={busy||orientationRequired||setupRequired}
++              onClick={()=>void lessonAction('start')}>{busy?'Starting…':'Start 14-day lesson'}</button>
+           </>}
+         </article>:<article className="lesson-article protected-curriculum"><div className="lesson-art"><div className="lesson-art-glow"/><div className="lesson-art-label"><Chip variant="green">PHASE {String(currentLesson.phaseId).padStart(2,"0")} / LESSON {Math.max(1,lessons.findIndex(l=>l.id===currentLesson.id)+1)}</Chip><h2>{currentLesson.title}</h2><p>{currentLesson.objective}</p><div><Clock3 size={15}/> {currentLesson.minutes} MIN <span>·</span> {currentLesson.difficulty.toUpperCase()}</div></div><Terminal className="lesson-art-icon" size={140}/></div><div className="lesson-article-inner">
+         {live && <div className="live-lesson-status">
+@@ -249,7 +288,10 @@
+             {iteration.status === 'exhausted' && <p>Both attempt windows have ended. Contact the Academy for help with your next step.</p>}
+           </> : <p>Administrator preview</p>}
+         </div>}
++        {liveDetail?.id === currentLesson.id && liveDetail.guide && <GuidedLesson guide={liveDetail.guide} />}
+         <div className="lesson-objective"><Lightbulb size={20}/><p><strong>What you'll learn</strong><br/>{currentLesson.objective}</p></div>{currentLesson.sections.map((section,i)=><section className="lesson-section" key={i}><div className="lesson-section-no">0{i+1} / {String(currentLesson.sections.length).padStart(2,"0")}</div><h3>{section.heading}</h3><p>{section.body}</p>{section.code&&<CodePanel code={section.code} language={section.language||"Python"}/>} {section.note&&<div className="lesson-note"><Lightbulb size={19}/><span>{section.note}</span></div>}</section>)}<div className="challenge-box"><div className="challenge-kicker"><Zap size={18}/> YOUR INDEPENDENT CHALLENGE</div><h3>Now it's your turn.</h3><p>{currentLesson.challenge}</p><label htmlFor="reflection">Your notes / approach</label><textarea id="reflection" value={saved.notes[currentLesson.id]??""} onChange={e=>setSaved(old=>({...old,notes:{...old.notes,[currentLesson.id]:e.target.value}}))} placeholder="Write down your approach or what you learned… (saved automatically in this browser)" rows={4}/><small>Practice locally in Python. This is a notes area, not a code execution environment.</small></div>
++        {live && selected && <FormativePanel key={selected.id} lesson={selected.id} stage="after" />}
++        {liveDetail?.id === currentLesson.id && <ResourceLinks links={liveDetail.resources} />}
+         {quiz.length>0&&<section className="quiz-block" id="lesson-quiz"><div className="quiz-title"><div><span className="eyebrow"><span className="eyebrow-dot"/> KNOWLEDGE CHECK</span><h3>Test your understanding</h3><p>Answer {quiz.length} questions. Aim for at least {passingScore}/{quiz.length} to complete this lesson.</p></div><div className="quiz-illustration"><ClipboardCheck size={30}/></div></div>{quiz.map((q,i)=><div key={i} className="quiz-question"><h4><span>{String(i+1).padStart(2,"0")}</span>{q.question}</h4><div className="quiz-options">{q.answers.map((answer,j)=><button key={j} disabled={quizSubmitted||busy||!canSubmit} className={`quiz-option ${quizAnswers[i]===j?"chosen":""} ${!live&&quizSubmitted&&j===q.correct?"correct":""} ${!live&&quizSubmitted&&quizAnswers[i]===j&&j!==q.correct?"incorrect":""}`} onClick={()=>setQuizAnswers(a=>({...a,[i]:j}))}><span className="option-circle">{String.fromCharCode(65+j)}</span>{answer}{!live&&quizSubmitted&&j===q.correct&&<CheckCircle2 size={17}/>}</button>)}</div>{!live&&quizSubmitted&&<div className="quiz-explanation"><Lightbulb size={16}/>{q.reason}</div>}</div>)}<div className="quiz-footer">
+           {live && result ? <div className="quiz-result" role="status">
+             <Trophy size={23}/> Score <strong>{result.raw_score}%</strong>
+@@ -279,5 +321,5 @@
+   </div>
+   <AnimatePresence>{projectOpen&&(()=>{const project=projects.find(p=>p.id===projectOpen);if(!project||project.locked)return null;const phase=phases.find(p=>p.id===project.phase)??phases[0];return <motion.div className="modal-cover" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setProjectOpen(null)}><motion.div className="project-modal" role="dialog" aria-modal="true" aria-label={project.name} initial={{y:30,opacity:0,scale:.96}} animate={{y:0,opacity:1,scale:1}} exit={{y:18,opacity:0}} transition={{duration:.25}} onClick={e=>e.stopPropagation()}><div className="modal-top"><Chip variant="green">PROJECT · PHASE {String(project.phase).padStart(2,"0")}</Chip><button className="icon-button" onClick={()=>setProjectOpen(null)} aria-label="Close project"><X size={20}/></button></div><div className="modal-icon"><Rocket size={35}/></div><h2>{project.name}</h2><p>{project.description}</p><h3>What you'll practise</h3><div className="skill-tags">{project.skills.map(s=><span key={s}>{s}</span>)}</div><h3>Success criteria</h3><ul className="modal-checklist"><li>Plan the requirements and explain your design decisions.</li><li>Build a working, maintainable implementation.</li><li>Test both expected behaviour and failure cases.</li><li>Document limitations, setup steps and next improvements.</li></ul><div className="modal-note">Detailed guided project instructions are released with their respective lessons. This is the curriculum milestone specification.</div><button className="btn btn-primary" onClick={()=>{setProjectOpen(null);setPhaseOpen(phase?.id??1);navigate("roadmap")}}>Explore phase syllabus <ArrowRight size={17}/></button></motion.div></motion.div>})()}</AnimatePresence>
+   <AnimatePresence>{toast&&<motion.div className="toast" initial={{y:25,opacity:0}} animate={{y:0,opacity:1}} exit={{y:15,opacity:0}} role="status"><CheckCircle2 size={19}/>{toast}</motion.div>}</AnimatePresence>
+- </div>;
++ </div></MotionConfig>;
+ }
+diff --git a/components/LessonStudyTools.tsx b/components/LessonStudyTools.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/LessonStudyTools.tsx
+@@ -0,0 +1,108 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { api } from '@/lib/session-api';
++
++export type Resource = { title: string; url: string; purpose: string };
++export type LessonGuide = {
++  explanation: string;
++  demonstration: string;
++  example: string;
++  guided_exercise: string;
++  independent_exercise: string;
++  further_explanation: string;
++};
++type Score = {correct: number; total: number};
++type CheckData = {
++  questions: {id: number; prompt: string; options: string[]}[];
++  can_answer: boolean;
++  results: {before?: Score; after?: Score};
++};
++type CheckResponse = Pick<CheckData, 'results'> & {feedback: {correct: boolean; explanation: string}[]};
++
++export function ResourceLinks({ links }: {links: Resource[]}) {
++  if (!links.length) return null;
++  return <section className="study-panel">
++    <h3>Optional resources</h3>
++    <ul>{links.map(link => <li key={link.url}><a href={link.url} target="_blank" rel="noreferrer">{link.title}</a>
++      {' · '}{link.purpose}</li>)}</ul>
++  </section>;
++}
++
++export function GuidedLesson({ guide }: {guide: LessonGuide}) {
++  return <section className="study-panel">
++    <h3>Learn it step by step</h3>
++    <h4>1. Explain</h4><p>{guide.explanation}</p>
++    <h4>2. Demonstrate</h4><p>{guide.demonstration}</p>
++    {guide.example && <pre><code>{guide.example}</code></pre>}
++    <h4>3. Try it with guidance</h4><p>{guide.guided_exercise}</p>
++    <h4>4. Try it on your own</h4><p>{guide.independent_exercise}</p>
++    {guide.further_explanation && <details><summary>Extra explanation</summary><p>{guide.further_explanation}</p></details>}
++  </section>;
++}
++
++export function FormativePanel({ lesson, stage }: {lesson: string; stage: 'before' | 'after'}) {
++  const [open, setOpen] = useState(false);
++  const [check, setCheck] = useState<CheckData | null>(null);
++  const [answers, setAnswers] = useState<Record<number, number>>({});
++  const [feedback, setFeedback] = useState<CheckResponse['feedback']>([]);
++  const [error, setError] = useState('');
++  const [busy, setBusy] = useState(false);
++  const path = `/academy/lessons/${encodeURIComponent(lesson)}/check/${stage}/`;
++
++  useEffect(() => {
++    if (!open) return;
++    let active = true;
++    api<CheckData>(path).then(
++      data => { if (active) { setCheck(data); setError(''); } },
++      cause => { if (active) setError(cause.message); },
++    );
++    return () => { active = false; };
++  }, [path, open]);
++
++  async function submit() {
++    if (!check || busy) return;
++    setBusy(true);
++    setError('');
++    try {
++      const result = await api<CheckResponse>(path, {
++        question_ids: check.questions.map(question => question.id),
++        answers: check.questions.map(question => answers[question.id]),
++      });
++      setCheck({ ...check, results: result.results });
++      setFeedback(result.feedback);
++    } catch (cause) {
++      setError(cause instanceof Error ? cause.message : 'Could not save your check.');
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return <details className="study-panel" onToggle={event => setOpen(event.currentTarget.open)}>
++    <summary>{stage === 'before' ? 'Before you begin · quick practice check' : '5. Check understanding · quick after check'}</summary>
++    <p>This optional practice saves your result for revision. It carries no grade and starts no timer.</p>
++    {error && <p role="alert">{error}</p>}
++    {open && !check && !error && <p role="status">Loading the practice check…</p>}
++    {check && <>
++      <div aria-live="polite">{check.results.before && <p>Before check {check.results.before.correct}/{check.results.before.total}</p>}
++        {check.results.after && <p>After check {check.results.after.correct}/{check.results.after.total}</p>}
++      </div>
++      {!check.questions.length && <p>A practice check is being prepared for this lesson.</p>}
++      {check.questions.length > 0 && !check.can_answer && <p>This check is closed for your current lesson stage.</p>}
++      {check.can_answer && <form onSubmit={event => { event.preventDefault(); void submit(); }}>
++        {check.questions.map((question, index) => <fieldset key={question.id}>
++          <legend>{question.prompt}</legend>
++          {question.options.map((option, choice) => <label className="study-choice" key={choice}>
++            <input type="radio" name={`check-${stage}-${question.id}`} required
++              checked={answers[question.id] === choice}
++              onChange={() => { setAnswers(previous => ({...previous, [question.id]: choice})); setFeedback([]); }} />{option}
++          </label>)}
++          {feedback[index] && <p role="status">{feedback[index].correct ? 'Correct. ' : 'Review this idea. '}{feedback[index].explanation}</p>}
++        </fieldset>)}
++        <button className="btn btn-outline" disabled={busy || Object.keys(answers).length !== check.questions.length}>
++          {busy ? 'Saving…' : 'Check my understanding'}
++        </button>
++      </form>}
++    </>}
++  </details>;
++}
+diff --git a/components/LiveLearningPlatform.tsx b/components/LiveLearningPlatform.tsx
+--- a/components/LiveLearningPlatform.tsx
++++ b/components/LiveLearningPlatform.tsx
+@@ -19,6 +19,7 @@
+   admin: boolean;
+   iterations: Record<string, Iteration>;
+   quote: string;
++  orientation: {version: string; acknowledged: boolean};
+ };
+ 
+ export type LiveClassroom = Account & {
+diff --git a/components/MistakesNotebook.tsx b/components/MistakesNotebook.tsx
+new file mode 100644
+--- /dev/null
++++ b/components/MistakesNotebook.tsx
+@@ -0,0 +1,86 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { api } from '@/lib/session-api';
++
++type Note = {id: number; title: string; mistake: string; correction: string; updated_at: string};
++type Draft = Pick<Note, 'title' | 'mistake' | 'correction'> & {id?: number};
++const emptyDraft: Draft = {title: '', mistake: '', correction: ''};
++
++export default function MistakesNotebook() {
++  const [notes, setNotes] = useState<Note[]>([]);
++  const [draft, setDraft] = useState<Draft>(emptyDraft);
++  const [confirm, setConfirm] = useState<number | null>(null);
++  const [error, setError] = useState('');
++  const [notice, setNotice] = useState('');
++  const [busy, setBusy] = useState(false);
++  const path = '/academy/notes/';
++
++  useEffect(() => {
++    let active = true;
++    api<Note[]>(path).then(
++      data => { if (active) setNotes(data); },
++      cause => { if (active) setError(cause.message); },
++    );
++    return () => { active = false; };
++  }, []);
++
++  async function save() {
++    if (busy || !draft.title.trim() || !draft.mistake.trim()) return;
++    setBusy(true); setError(''); setNotice('');
++    try {
++      const note = await api<Note>(path, {...draft, action: 'save'});
++      setNotes(previous => [note, ...previous.filter(item => item.id !== note.id)]);
++      setDraft(emptyDraft);
++      setNotice('Note saved to your account.');
++    } catch (cause) {
++      setError(cause instanceof Error ? cause.message : 'Could not save the note.');
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  async function remove(id: number) {
++    setBusy(true); setError(''); setNotice('');
++    try {
++      await api(path, {action: 'delete', id});
++      setNotes(previous => previous.filter(note => note.id !== id));
++      if (draft.id === id) setDraft(emptyDraft);
++      setConfirm(null);
++      setNotice('Note deleted.');
++    } catch (cause) {
++      setError(cause instanceof Error ? cause.message : 'Could not delete the note.');
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return <>
++    <h2>Mistakes notebook</h2>
++    <p>Write down what you tried, what surprised you, and what you’ll try next. These are private account notes.</p>
++    {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
++    <form className="study-panel" onSubmit={event => { event.preventDefault(); void save(); }}>
++      <h3>{draft.id ? 'Edit your note' : 'Add a note'}</h3>
++      <label className="study-label">Title<input required maxLength={100} value={draft.title}
++        onChange={event => setDraft({...draft, title: event.target.value})} /></label>
++      <label className="study-label">What happened?<textarea required maxLength={1500} rows={3} value={draft.mistake}
++        onChange={event => setDraft({...draft, mistake: event.target.value})} /></label>
++      <label className="study-label">What will you change?<textarea maxLength={1500} rows={3} value={draft.correction}
++        onChange={event => setDraft({...draft, correction: event.target.value})} /></label>
++      <div className="study-actions">
++        <button className="btn btn-primary" disabled={busy || !draft.title.trim() || !draft.mistake.trim()}>Save note</button>
++        {draft.id && <button className="btn btn-outline" type="button" onClick={() => setDraft(emptyDraft)}>Cancel editing</button>}
++      </div>
++    </form>
++    {notes.map(note => <section key={note.id} className="study-panel">
++      <h3>{note.title}</h3><p>{note.mistake}</p>{note.correction && <p><strong>Next try: </strong>{note.correction}</p>}
++      <div className="study-actions">
++        <button className="btn btn-outline" disabled={busy} onClick={() => { setDraft(note); setConfirm(null); }}>Edit note</button>
++        {confirm === note.id ? <>
++          <button className="btn btn-outline" disabled={busy} onClick={() => void remove(note.id)}>Confirm delete</button>
++          <button className="btn btn-outline" disabled={busy} onClick={() => setConfirm(null)}>Keep note</button>
++        </> : <button className="btn btn-outline" disabled={busy} onClick={() => setConfirm(note.id)}>Delete note</button>}
++      </div>
++    </section>)}
++  </>;
++}
+diff --git a/docs/PROOFLOOP_V10_4_BEGINNER_FOUNDATIONS.md b/docs/PROOFLOOP_V10_4_BEGINNER_FOUNDATIONS.md
+new file mode 100644
+--- /dev/null
++++ b/docs/PROOFLOOP_V10_4_BEGINNER_FOUNDATIONS.md
+@@ -0,0 +1,41 @@
++# ProofLoop v10.4 · Beginner Foundations
++
++This batch builds on the verified v10.3 Code Defence Room source. It adds a Study Hub inside the signed-in v9-style dashboard and extends the live Django classroom with beginner teaching guides. Existing account, deadline, project, Mentor, Learning Twin and assessment records carry forward.
++
++## Upgrade an existing v10.3 installation
++
++Back up your project and database. Apply the patch in the v10.3 project root, or use the complete source ZIP. Keep your database, private media and local environment files.
++
++```powershell
++git apply --check .\SAIRE_Academy_v10_3_to_v10_4.patch
++git apply .\SAIRE_Academy_v10_3_to_v10_4.patch
++cd backend
++python manage.py migrate
++```
++
++Restart Django and Next.js. Rebuild Next.js first if you serve a production build. The courses and progression migrations add the authoring and private study tables. The content migration adds the first Python lab, four lesson guides, practice checks and official references to the seeded course. It leaves existing lesson bodies, questions, marks, submissions and authored guide fields intact. A fresh installation receives the same content from `seed_curriculum`.
++
++Optional Django environment settings:
++
++- `SAIRE_ORIENTATION_VERSION` defaults to `2026-11-v1`. Increase or change it after a material Handbook revision so new starts require a new acknowledgment.
++- `SAIRE_SUPPORT_EMAIL` displays the Academy’s support contact. When unset, the Handbook directs learners to their instructor’s contact channel.
++- `SAIRE_SUPPLEMENTARY_GRADE_CAP` is the existing setting, 70% by default. Existing attempts retain their saved cap. Assignment pass marks and project durations are edited in Django Admin.
++
++The existing OAuth and Mentor credentials continue to use the v10 setup. See the setup guide shipped in the source ZIP for callback URLs and environment variables.
++
++## Learner journey
++
++1. Sign in and open the welcome tour in Study Hub. Skip or replay the tour whenever useful. Read the searchable Handbook and save a rules acknowledgment.
++2. Open **Getting Ready** for the module. Read the outcomes and confirm the tool checklist. This step and the optional before check use no timed attempt.
++3. Open **My classroom** and start the lesson when ready. Read the plain-language explanation, run the example, try the guided and independent exercises, and use the optional after check. The separate graded quiz completes the lesson under its existing rules.
++4. Keep a private account notebook. Revision suggests revisiting missed after checks or a lesson passed at least three days ago. First program is earned by confirming the lab checklist. First reviewed challenge comes from a recorded instructor review.
++
++Django enforces current orientation and the latest required module checklist for **new** lesson or project starts, including CLI project starts. Previously started work can resume on its existing deadline. Superusers retain test access. The initial four Python lessons have authored examples. Future modules have outcomes and a reusable setup template. An instructor can publish a module-specific lab before enabling its required checklist.
++
++## Authoring and support
++
++In Django Admin, use **Module guides** for outcomes, setup steps and verification labels. Publish the guide once its steps are ready. Increase its revision when learners should confirm the checklist again. Use **Lessons** for the five-part teaching sequence and separate formative questions. Use **Learning resources** for HTTPS links at module or lesson level, and **Glossary entries** for reusable definitions.
++
++Text-first mode suppresses decorative classroom and dashboard elements. The guided tour uses buttons and announces each step. Formative checks use labelled choices with keyboard access. The lab and core examples are text and code; optional reading is linked out. Accommodation requests and deadline exceptions are handled directly by Academy staff. This release suggests revision from recorded evidence. Automated reminders, adaptive scheduling, an accommodations request queue and fully authored labs for later modules are outside this batch.
++
++Official tool pages checked for the Python lab are the [Python Windows downloads](https://www.python.org/downloads/windows/), [Python on Windows guide](https://docs.python.org/3/using/windows.html), [VS Code downloads](https://code.visualstudio.com/download), [Microsoft Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and [Git for Windows](https://git-scm.com/install/windows).
+diff --git a/lib/lms-api.ts b/lib/lms-api.ts
+--- a/lib/lms-api.ts
++++ b/lib/lms-api.ts
+@@ -17,7 +17,7 @@
+ };
+ 
+ export type CourseDetails = Omit<CourseSummary,"phase_count"|"lesson_count"> & {
+-  updated_at?: string; phases: (Phase & { progress?: ModuleProgress })[]; lessons: CmsLesson[]; projects: CmsProject[];
++  updated_at?: string; phases: (Phase & { progress?: ModuleProgress; module_id?: number; setup_required?: boolean; setup_complete?: boolean })[]; lessons: CmsLesson[]; projects: CmsProject[];
+ };
+ 
+ export const demoCourse: CourseDetails = {

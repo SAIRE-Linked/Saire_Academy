@@ -1,0 +1,47 @@
+{% extends "allauth/layouts/entrance.html" %}
+{% load socialaccount %}
+
+{% block head_title %}Connected sign-in methods · SAIRE-Linked Academy{% endblock %}
+
+{% block content %}
+  <h1>Connect your sign-in methods</h1>
+  <p>You are signed in as <strong>{{ request.user.get_username }}</strong>. Connect Google or GitHub here to use it for this same Academy account next time. Connecting a provider keeps your existing lessons and progress.</p>
+
+  <h2>Your connected accounts</h2>
+  {% if form.accounts %}
+    <ul>
+      {% for connected in form.accounts %}
+        <li>{{ connected.get_provider.name }}: {{ connected.get_provider_account }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No Google or GitHub account is connected yet.</p>
+  {% endif %}
+
+  <h2>Add a sign-in method</h2>
+  <p>Choose your provider, continue on its confirmation page, and use the provider account you want to connect.</p>
+  {% get_providers as providers %}
+  {% url 'socialaccount_connections' as connections_url %}
+  <div class="entry-provider-list">
+    {% for provider in providers %}
+      <a class="entry-button" href="{% provider_login_url provider process='connect' next=connections_url %}">Connect {{ provider.name }}</a>
+    {% empty %}
+      <p>Provider sign-in is not configured. Ask the Academy administrator to check the server credentials.</p>
+    {% endfor %}
+  </div>
+  <p><a class="entry-pilot" href="/dashboard/">Return to my dashboard</a></p>
+
+  {% if form.accounts %}
+    <details {% if form.errors %}open{% endif %}>
+      <summary>Remove a connected sign-in method</summary>
+      <p>Keep another working way to sign in. The Academy checks this before removing a connection.</p>
+      <form method="post" action="{% url 'socialaccount_connections' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Remove selected connection</button>
+      </form>
+    </details>
+  {% elif form.errors %}
+    {{ form.errors }}
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,28 @@
+.academy-study { max-width: 880px; }
+.academy-study h2 { margin: 22px 0 10px; }
+.academy-study p, .study-panel li, .study-panel dd { line-height: 1.65; }
+.study-panel {
+  padding: 16px;
+  border: 1px solid #476463;
+  border-radius: 10px;
+  margin: 12px 0;
+  text-align: left;
+}
+.study-panel p { white-space: pre-wrap; }
+.study-panel h3, .study-panel h4 { margin: 6px 0; }
+.study-panel a { color: #a5edd2; text-decoration: underline; }
+.study-panel pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: #101c25; }
+.study-panel fieldset { border: 1px solid #476463; margin: 10px 0; padding: 10px; }
+.study-panel legend { padding: 0 4px; font-weight: 600; }
+.study-panel summary { cursor: pointer; font-weight: 600; }
+.study-panel dd { margin-inline-start: 0; }
+.study-label { display: grid; gap: 4px; margin: 10px 0; }
+.study-label input, .study-label select, .study-label textarea {
+  color: inherit; background: #101c25; border: 1px solid #63807c;
+  padding: 8px; border-radius: 5px; width: 100%; font: inherit;
+}
+.study-choice { display: flex; gap: 10px; align-items: baseline; margin: 8px 0; }
+.study-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.study-top-tools { margin-bottom: 16px; }
+.study-panel :focus-visible, .academy-study :focus-visible { outline: 2px solid #9ef3cf; outline-offset: 3px; }
+.text-first .hero-grid, .text-first .hero-orb, .text-first .banner-visual, .text-first .lesson-art-glow { display: none; }

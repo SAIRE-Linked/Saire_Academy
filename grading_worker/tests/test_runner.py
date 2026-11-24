@@ -67,7 +67,8 @@ class WorkerSecurityTests(unittest.TestCase):
                 verify_and_download('https://github.com/student/repo', 'a'*40)
 
     def test_suite_is_server_defined_not_from_job(self):
-        self.assertEqual(SUITES, {'saire-quotation-engine': 'quotation_engine'})
+        self.assertEqual(SUITES['saire-quotation-engine'], 'quotation_engine')
+        self.assertEqual(set(SUITES), {'saire-quotation-engine', 'saire-service-intake', 'saire-workflow-ledger', 'saire-lending-records'})
         with self.assertRaises(GraderError):
             grade({'assignment_slug': '../../malicious', 'repository_url': 'x', 'commit_sha': 'a'*40})
 
@@ -79,6 +80,20 @@ class WorkerSecurityTests(unittest.TestCase):
             interpret_result(report(12,0,0),1)
         with self.assertRaises(GraderError):
             interpret_result('Traceback',1)
+
+    def test_new_assignments_use_only_their_expected_file_and_trusted_suite(self):
+        for slug, module in [('saire-service-intake', 'intake'), ('saire-workflow-ledger', 'workflow'),
+                             ('saire-lending-records', 'records')]:
+            archive = zip_bytes({f'root/src/{module}.py': 'pass'})
+            report = 'SAIRE_GRADE_RESULT:' + json.dumps({'passed': 1, 'failed': 0, 'errors': 0, 'total': 1})
+            with patch('grading_worker.runner.verify_and_download', return_value=archive), \
+                 patch('grading_worker.runner.docker_run', return_value=(report, 0)) as run:
+                result = grade({'assignment_slug': slug, 'repository_url': 'https://github.com/student/repo', 'commit_sha': 'a'*40})
+                self.assertEqual(result['score'], 100)
+                self.assertEqual(run.call_args.args[1].name, module)
+            with patch('grading_worker.runner.verify_and_download', return_value=zip_bytes({'root/src/quotation.py': 'pass'})):
+                with self.assertRaises(GraderError):
+                    grade({'assignment_slug': slug, 'repository_url': 'https://github.com/student/repo', 'commit_sha': 'a'*40})
 
 
 if __name__ == '__main__':

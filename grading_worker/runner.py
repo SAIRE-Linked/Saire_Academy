@@ -23,7 +23,10 @@ import zipfile
 
 REPOS = re.compile(r'^https://github\.com/([A-Za-z0-9][A-Za-z0-9-]{0,38})/([A-Za-z0-9._-]{1,100})$')
 SHA = re.compile(r'^[0-9a-f]{40}$')
-SUITES = {'saire-quotation-engine': 'quotation_engine'}  # Only instructor-authored suites.
+SUITES = {'saire-quotation-engine': 'quotation_engine', 'saire-service-intake': 'intake',
+          'saire-workflow-ledger': 'workflow', 'saire-lending-records': 'records'}
+EXPECTED_FILES = {'saire-quotation-engine': 'quotation.py', 'saire-service-intake': 'intake.py',
+                  'saire-workflow-ledger': 'workflow.py', 'saire-lending-records': 'records.py'}
 BASE = Path(__file__).resolve().parent
 MAX_ARCHIVE = 8 * 1024 * 1024
 MAX_UNPACKED = 12 * 1024 * 1024
@@ -110,7 +113,7 @@ def verify_and_download(repository_url, commit_sha):
     return archive
 
 
-def safe_archive_extract(archive, destination):
+def safe_archive_extract(archive, destination, expected_file='quotation.py'):
     """Strip GitHub's root folder; reject symlinks, traversal and oversized archives."""
     try:
         zf = zipfile.ZipFile(io.BytesIO(archive))
@@ -154,8 +157,8 @@ def safe_archive_extract(archive, destination):
                 with z.open(entry) as source, target.open('wb') as output:
                     shutil.copyfileobj(source, output)
                 target.chmod(0o644)
-    if not (destination / 'src' / 'quotation.py').is_file():
-        raise GraderError('Expected src/quotation.py in submitted repository')
+    if not (destination / 'src' / expected_file).is_file():
+        raise GraderError(f'Expected src/{expected_file} in submitted repository')
 
 
 def docker_args(source, suite, container_name, image):
@@ -247,7 +250,7 @@ def grade(job):
     archive = verify_and_download(job['repository_url'], job['commit_sha'])
     with tempfile.TemporaryDirectory(prefix='saire-grader-') as td:
         src = Path(td) / 'submitted'
-        safe_archive_extract(archive, src)
+        safe_archive_extract(archive, src, EXPECTED_FILES[slug])
         log, code = docker_run(src, suite)
     return interpret_result(log, code)
 

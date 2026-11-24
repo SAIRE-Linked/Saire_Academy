@@ -18,3 +18,7 @@ backend/.env
 .env.production
 node_modules/
 .next/
+
+backend/private_media/
+*.tsbuildinfo
+.venv/

@@ -32,6 +32,18 @@ class LearningTwinApiTests(TestCase):
         AssignmentSkill.objects.create(assignment=cls.assignment, skill=cls.skill, dimension='tests', weight=2)
         AssignmentSkill.objects.create(assignment=cls.assignment, skill=cls.skill2, dimension='defence', weight=1)
 
+    def test_practice_suggestions_follow_project_access(self):
+        from courses.models import Lesson
+        from progression.models import LessonIteration
+        lesson = Lesson.objects.create(module=self.assignment.module, title='Prerequisite', published=True)
+        def suggestion():
+            return next(skill['next_assignment'] for skill in build_profile(self.learner)['skills']
+                        if skill['slug'] == self.skill.slug)
+        self.assertIsNone(suggestion())
+        LessonIteration.objects.create(learner=self.learner, lesson=lesson, status='passed',
+                                       started_at=timezone.now(), due_at=timezone.now() + timedelta(days=14))
+        self.assertEqual(suggestion(), self.assignment.title)
+
     def auth(self, other=False):
         return {'HTTP_AUTHORIZATION': f'Token {(self.other_token if other else self.token).key}'}
 

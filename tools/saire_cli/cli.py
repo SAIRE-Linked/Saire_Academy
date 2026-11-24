@@ -109,8 +109,8 @@ def safe_extract(data, destination):
         for info in infos:
             posix = PurePosixPath(info.filename)
             mode = (info.external_attr >> 16) & 0xFFFF
-            if (posix.is_absolute() or '..' in posix.parts or '\\' in info.filename or
-                    not info.filename or (mode and stat.S_ISLNK(mode))):
+            if (posix.is_absolute() or '..' in posix.parts or '\\' in info.orig_filename or
+                    not info.filename or ':' in info.filename or (mode and stat.S_ISLNK(mode))):
                 raise CLIError('Unsafe starter ZIP entry blocked: ' + info.filename)
         destination.mkdir(parents=True)
         for info in infos:
@@ -148,7 +148,8 @@ def cmd_list(_):
     server, token = auth()
     result = endpoint(server, '/assignments/', token)
     for a in result:
-        print(f"{a['slug']:<32} {a['title']} ({a['duration_days']} days)")
+        label = 'locked: pass lesson prerequisites' if a.get('locked') else str(a['duration_days']) + ' days'
+        print(f"{a['slug']:<32} {a['title']} ({label})")
     if not result:
         print('No published assignments yet.')
 

@@ -1,0 +1,693 @@
+[
+  {
+    "code": "IS511",
+    "title": "Information Systems 511",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "IS511"
+      }
+    ]
+  },
+  {
+    "code": "PR511",
+    "title": "Programming 511",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "PR511"
+      }
+    ]
+  },
+  {
+    "code": "WEB511",
+    "title": "Web Technology 511",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "WEB511"
+      }
+    ]
+  },
+  {
+    "code": "MATH511",
+    "title": "Mathematics 511",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "MATH511"
+      }
+    ]
+  },
+  {
+    "code": "NET511",
+    "title": "Networks 511",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "NET511"
+      }
+    ]
+  },
+  {
+    "code": "IS512",
+    "title": "Information Systems 512",
+    "attribution": "Richfield Graduate Institute of Technology (Pty) Ltd; individual author/edition not established",
+    "availability": "audited",
+    "sha256": "4605e20e82e990eec19eff01630c4ca616918d0f5b598fc7bfe2ee1e6b3f74e8",
+    "pages": 169,
+    "audit_note": "All pages extracted locally; contents, chapter headings and stated outcomes reviewed for topic coverage. No source exercises or passages reproduced. PDF page references are one-based. Cover filename says 2025; body header says Year 1 2024. Seven chapters confirmed, including emerging technologies.",
+    "filenames": [
+      "2025 INS512 Study Guide - BSC(1).pdf"
+    ],
+    "topics": [
+      {
+        "topic": "Connect software lifecycle, analysis and data storage",
+        "pages": "8-31",
+        "coverage": "partial",
+        "gap": "Small original validation/workflow slice only; lifecycle, feasibility and database breadth remain.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Evaluate sustainable computing choices",
+        "pages": "32-46",
+        "coverage": "backlog",
+        "gap": "Energy measurement, lifecycle and e-waste evidence.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Compare digital commerce models and impacts",
+        "pages": "47-73",
+        "coverage": "backlog",
+        "gap": "Original business cases and contextual ethics review.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Explain mobile and wireless business systems",
+        "pages": "74-106",
+        "coverage": "backlog",
+        "gap": "Original wireless/mobile trade-off activities.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Evaluate social platforms in organisational work",
+        "pages": "107-121",
+        "coverage": "backlog",
+        "gap": "Privacy, provenance and original business analysis.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Explain transactional and enterprise workflows",
+        "pages": "122-139",
+        "coverage": "partial",
+        "gap": "Original three-state workflow only; functional systems, ERP and cross-team integration remain.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Evaluate emerging technologies with evidence",
+        "pages": "140-169",
+        "coverage": "backlog",
+        "gap": "Avoid forecasts presented as settled facts; independent research briefs.",
+        "target": "IS512"
+      }
+    ]
+  },
+  {
+    "code": "PR512",
+    "title": "Programming 512",
+    "attribution": "Richfield Graduate Institute of Technology (Pty) Ltd; individual author/edition not established",
+    "availability": "audited",
+    "sha256": "40363be81640de6594d0795a3611c609b5a0d62cc07aa028d58464b1234fba1e",
+    "pages": 108,
+    "audit_note": "All pages extracted locally; contents, chapter headings and stated outcomes reviewed for topic coverage. No source exercises or passages reproduced. PDF page references are one-based. Printed page numbers restart in database chapter and GUI outcomes repeat OOP wording; use PDF pages and independently authored GUI outcomes.",
+    "filenames": [
+      "PROGRAMMING 512 Study Guide(1).pdf",
+      "PROGRAMMING 512 Study Guide.pdf"
+    ],
+    "topics": [
+      {
+        "topic": "Use lists, nested collections and tuples",
+        "pages": "8-31",
+        "coverage": "partial",
+        "gap": "Original report loop introduces lists only; slicing, nested collections and tuple operations remain.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Use mappings and unique collections",
+        "pages": "32-55",
+        "coverage": "partial",
+        "gap": "Original named records and counters only; dictionary operations and set algebra remain.",
+        "target": "IS512"
+      },
+      {
+        "topic": "Design objects and explain inheritance",
+        "pages": "56-75",
+        "coverage": "backlog",
+        "gap": "Independent OOP lesson, composition and tests.",
+        "target": "PR512"
+      },
+      {
+        "topic": "Build an event-driven desktop interface",
+        "pages": "76-93",
+        "coverage": "backlog",
+        "gap": "Original accessible Tkinter lab and GUI tests.",
+        "target": "PR512"
+      },
+      {
+        "topic": "Create and query persistent data from Python",
+        "pages": "94-105",
+        "coverage": "partial",
+        "gap": "One-table SQLite sample only; updates, deletes, broader design and durable transaction practice remain.",
+        "target": "DB600"
+      }
+    ]
+  },
+  {
+    "code": "WEB512",
+    "title": "Web Technology 512",
+    "attribution": "Richfield Graduate Institute of Technology (Pty) Ltd; individual author/edition not established",
+    "availability": "audited",
+    "sha256": "156f93a7c8107ad6c93ed85ab74f9b114efb391ee2e3340e79db09144b6eb328",
+    "pages": 153,
+    "audit_note": "All pages extracted locally; contents, chapter headings and stated outcomes reviewed for topic coverage. No source exercises or passages reproduced. PDF page references are one-based. Modernise legacy scripting conventions rather than reproducing obsolete patterns.",
+    "filenames": [
+      "WEB TECHNOLOGY 512 GUIDE(1).pdf",
+      "WEB TECHNOLOGY 512 GUIDE.pdf"
+    ],
+    "topics": [
+      {
+        "topic": "Explain JavaScript and use browser development tools",
+        "pages": "7-12",
+        "coverage": "backlog",
+        "gap": "Original tools and debugging lab.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Connect scripts to browser and document models",
+        "pages": "13-33",
+        "coverage": "backlog",
+        "gap": "Modern script loading, DOM and events.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Use values, operators, decisions and iteration",
+        "pages": "34-62",
+        "coverage": "backlog",
+        "gap": "Modern let/const and explicit coercion checks.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Use arrays, functions and scope",
+        "pages": "63-78",
+        "coverage": "backlog",
+        "gap": "Original tests for scope and arrays.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Transform and inspect strings",
+        "pages": "79-87",
+        "coverage": "backlog",
+        "gap": "Modern string methods; legacy methods identified.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Use objects and built-in date, maths and pattern tools",
+        "pages": "88-115",
+        "coverage": "backlog",
+        "gap": "Prototype-aware objects and careful date handling.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Validate forms and use form controls",
+        "pages": "116-128",
+        "coverage": "backlog",
+        "gap": "Accessible errors plus server-side validation.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Create and update document elements",
+        "pages": "129-135",
+        "coverage": "backlog",
+        "gap": "Safe textContent and event handling.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Classify and handle errors",
+        "pages": "136-143",
+        "coverage": "backlog",
+        "gap": "Original debugging cases without copied questions.",
+        "target": "WEB512"
+      },
+      {
+        "topic": "Explain browser cookie operations",
+        "pages": "144-153",
+        "coverage": "backlog",
+        "gap": "Modern security attributes, consent context and session boundaries.",
+        "target": "WEB512"
+      }
+    ]
+  },
+  {
+    "code": "MATH512",
+    "title": "Mathematics 512",
+    "attribution": "Richfield Graduate Institute of Technology (Pty) Ltd; individual author/edition not established",
+    "availability": "audited",
+    "sha256": "c3bf80268a0e2f11666f2a704d2c2d96efcac9816e9625b1cc78e0f5ae860521",
+    "pages": 90,
+    "audit_note": "All pages extracted locally; contents, chapter headings and stated outcomes reviewed for topic coverage. No source exercises or passages reproduced. PDF page references are one-based. Revise tangent explanations using limits; avoid implying that a tangent can never cross a curve.",
+    "filenames": [
+      "MATHS  512 Study Guide(1).pdf",
+      "MATHS  512 Study Guide.pdf"
+    ],
+    "topics": [
+      {
+        "topic": "Solve and graph linear equations",
+        "pages": "9-17",
+        "coverage": "backlog",
+        "gap": "Algebra practice and graph interpretation.",
+        "target": "MATH512"
+      },
+      {
+        "topic": "Solve quadratic equations and interpret roots",
+        "pages": "18-27",
+        "coverage": "backlog",
+        "gap": "Factoring, formula and graph-based reasoning.",
+        "target": "MATH512"
+      },
+      {
+        "topic": "Reason about limits, continuity and tangent slopes",
+        "pages": "28-43",
+        "coverage": "backlog",
+        "gap": "Original limiting-secant explanation and checked graphs.",
+        "target": "MATH512"
+      },
+      {
+        "topic": "Apply derivative rules and interpret rates",
+        "pages": "44-63",
+        "coverage": "backlog",
+        "gap": "Power, product, quotient, chain and trigonometric differentiation.",
+        "target": "MATH512"
+      },
+      {
+        "topic": "Interpret accumulation and compute integrals",
+        "pages": "64-84",
+        "coverage": "backlog",
+        "gap": "Definite/indefinite integrals, substitution, parts and partial fractions.",
+        "target": "MATH512"
+      }
+    ]
+  },
+  {
+    "code": "NET512",
+    "title": "Networks 512",
+    "attribution": "Richfield Graduate Institute of Technology (Pty) Ltd; individual author/edition not established",
+    "availability": "audited",
+    "sha256": "2f6f479b5476c1d750b47b6db1632fa32505dde5355ebaed3330a8011136e420",
+    "pages": 114,
+    "audit_note": "All pages extracted locally; contents, chapter headings and stated outcomes reviewed for topic coverage. No source exercises or passages reproduced. PDF page references are one-based. Treat classful IPv4 as historical context and future mobile-network claims as forecasts requiring current verification.",
+    "filenames": [
+      "NETWORKS 512 Study Guide_(1).pdf",
+      "NETWORKS 512 Study Guide_.pdf"
+    ],
+    "topics": [
+      {
+        "topic": "Explain security goals, threats and social manipulation",
+        "pages": "11-39",
+        "coverage": "backlog",
+        "gap": "Defensive-only original threat model lab.",
+        "target": "NET512"
+      },
+      {
+        "topic": "Trace TCP/IP protocols and IPv4/IPv6 behaviour",
+        "pages": "40-54",
+        "coverage": "backlog",
+        "gap": "Packet/protocol reasoning and current official references.",
+        "target": "NET512"
+      },
+      {
+        "topic": "Use addressing, subnet masks and prefix notation",
+        "pages": "55-75",
+        "coverage": "backlog",
+        "gap": "CIDR exercises and IPv6; classful labels only as history.",
+        "target": "NET512"
+      },
+      {
+        "topic": "Compare mobile network generations and future claims",
+        "pages": "76-94",
+        "coverage": "backlog",
+        "gap": "Separate deployed specifications from research forecasts.",
+        "target": "NET512"
+      },
+      {
+        "topic": "Design and automate cloud network boundaries",
+        "pages": "95-114",
+        "coverage": "backlog",
+        "gap": "Provider-neutral topology, IAM, costs and recovery lab.",
+        "target": "NET512"
+      }
+    ]
+  },
+  {
+    "code": "DS500",
+    "title": "Data Science 500",
+    "attribution": "Richfield Graduate Institute of Technology (Pty) Ltd; individual author/edition not established",
+    "availability": "audited",
+    "sha256": "8f34e857cfd2f563638987dd308d860a8e41ee2cb58b26737244e88104f5a45d",
+    "pages": 82,
+    "audit_note": "All pages extracted locally; contents, chapter headings and stated outcomes reviewed for topic coverage. No source exercises or passages reproduced. PDF page references are one-based. Cover and contents identify Data Science 500, but inner title page says Programming 511: recorded as a source labelling inconsistency, not a second guide.",
+    "filenames": [
+      "Data Science 500 Study Guide(1).pdf"
+    ],
+    "topics": [
+      {
+        "topic": "Frame a data question with domain knowledge",
+        "pages": "8-11",
+        "coverage": "backlog",
+        "gap": "Original question and evidence journal.",
+        "target": "DS500"
+      },
+      {
+        "topic": "Classify data and compute descriptive summaries",
+        "pages": "12-18",
+        "coverage": "backlog",
+        "gap": "Measurement scales, missing data and NumPy.",
+        "target": "DS500"
+      },
+      {
+        "topic": "Plan a repeatable analysis workflow",
+        "pages": "19-21",
+        "coverage": "backlog",
+        "gap": "Question, acquisition, cleaning, analysis and communication.",
+        "target": "DS500"
+      },
+      {
+        "topic": "Manipulate tabular data with pandas",
+        "pages": "22-32",
+        "coverage": "backlog",
+        "gap": "Fresh synthetic dataset and original cleaning tests.",
+        "target": "DS500"
+      },
+      {
+        "topic": "Communicate data through appropriate plots",
+        "pages": "33-37",
+        "coverage": "backlog",
+        "gap": "Accessible charts with uncertainty and labelled units.",
+        "target": "DS500"
+      },
+      {
+        "topic": "Reason about probability and conditional events",
+        "pages": "38-52",
+        "coverage": "backlog",
+        "gap": "Original examples, assumptions and worked reasoning.",
+        "target": "DS500"
+      },
+      {
+        "topic": "Evaluate introductory machine learning and regression",
+        "pages": "53-71",
+        "coverage": "backlog",
+        "gap": "Baselines, held-out data, leakage and limitations.",
+        "target": "DS500"
+      },
+      {
+        "topic": "Extract permitted web data responsibly",
+        "pages": "72-80",
+        "coverage": "backlog",
+        "gap": "Use a local synthetic HTML fixture; source review before live fetching.",
+        "target": "DS500"
+      }
+    ]
+  },
+  {
+    "code": "PR621",
+    "title": "Programming 621",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "PR621"
+      }
+    ]
+  },
+  {
+    "code": "PR622",
+    "title": "Programming 622",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "PR622"
+      }
+    ]
+  },
+  {
+    "code": "IP621",
+    "title": "Internet Programming 621",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "IP621"
+      }
+    ]
+  },
+  {
+    "code": "IP622",
+    "title": "Internet Programming 622",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "IP622"
+      }
+    ]
+  },
+  {
+    "code": "IS621",
+    "title": "Information Systems 621",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "IS621"
+      }
+    ]
+  },
+  {
+    "code": "IS622",
+    "title": "Information Systems 622",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "IS622"
+      }
+    ]
+  },
+  {
+    "code": "DB600",
+    "title": "Database Systems 600",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "DB600"
+      }
+    ]
+  },
+  {
+    "code": "CC600",
+    "title": "Cloud Computing 600",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "CC600"
+      }
+    ]
+  },
+  {
+    "code": "ML600",
+    "title": "Machine Learning 600",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "ML600"
+      }
+    ]
+  },
+  {
+    "code": "BDI600",
+    "title": "Big Data and IoT 600",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "BDI600"
+      }
+    ]
+  },
+  {
+    "code": "TEXT-SYSTEMS",
+    "title": "Systems analysis/design textbook (identity unverified)",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "TEXT-SYSTEMS"
+      }
+    ]
+  },
+  {
+    "code": "TEXT-CLOUD",
+    "title": "Cloud computing textbook (identity unverified)",
+    "attribution": "Unverified: awaiting source and bibliographic details",
+    "availability": "missing",
+    "sha256": "",
+    "pages": null,
+    "audit_note": "Expected from the referenced collection; file unavailable in this workspace. Code, year and chapter coverage require source validation.",
+    "filenames": [],
+    "topics": [
+      {
+        "topic": "Source unavailable: provisional curriculum scope only",
+        "pages": "",
+        "coverage": "pending_source",
+        "gap": "Obtain and inspect this source before claiming chapter or outcome alignment.",
+        "target": "TEXT-CLOUD"
+      }
+    ]
+  }
+]

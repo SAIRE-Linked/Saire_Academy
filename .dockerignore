@@ -7,3 +7,7 @@ backend/staticfiles
 backend/**/__pycache__
 *.zip
 .env*
+
+backend/private_media
+.venv
+*.tsbuildinfo

@@ -52,6 +52,8 @@ class ProofLoopApiTests(TestCase):
         response = self.client.get('/api/v1/assignments/')
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()[0]['locked'])
+        self.assertEqual(response.json()[0]['duration_days'], self.assignment.duration_days)
+        self.assertNotIn('brief', response.json()[0])
         self.assertNotIn('review_questions', response.json()[0])
         self.assignment.published=False;self.assignment.save()
         self.assertEqual(self.client.get('/api/v1/assignments/').json(), [])
